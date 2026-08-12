@@ -3,8 +3,8 @@ const FORWARDED_HEADERS = new Set([
   'user-agent', 'x-csrftoken',
 ]);
 
-export async function proxyToRender(request, response, prefix) {
-  const origin = (process.env.RENDER_API_ORIGIN || '').replace(/\/+$/, '');
+export async function proxyToBackend(request, response, prefix) {
+  const origin = (process.env.BACKEND_API_ORIGIN || '').replace(/\/+$/, '');
   if (!/^https:\/\/[^/]+$/.test(origin)) {
     response.status(503).json({ detail: 'The API proxy is not configured.' });
     return;

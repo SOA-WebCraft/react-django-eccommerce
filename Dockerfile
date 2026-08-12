@@ -17,8 +17,8 @@ COPY backend/requirements.txt ./
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
 COPY backend/ .
-RUN chmod +x scripts/render_build.sh scripts/render_start.sh \
-    && DJANGO_DEBUG=false DJANGO_SECRET_KEY=build-only-not-used-at-runtime scripts/render_build.sh \
+RUN chmod +x scripts/deploy_build.sh scripts/deploy_start.sh \
+    && DJANGO_DEBUG=false DJANGO_SECRET_KEY=build-only-not-used-at-runtime scripts/deploy_build.sh \
     && rm -f db.sqlite3
 
-CMD ["scripts/render_start.sh"]
+CMD ["scripts/deploy_start.sh"]

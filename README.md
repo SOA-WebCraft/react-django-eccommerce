@@ -367,66 +367,88 @@ environment setting. 2FA, API keys, backup/restore, SMS/push notifications, and
 external shipping, accounting, or marketing integrations are displayed as
 unavailable until dedicated secure integrations are implemented.
 
-## Production deployment: Vercel and Render
+## Production deployment: Vercel, Koyeb, Neon, and Cloudinary
 
-Production uses Vercel for `frontend/`, a Docker web service and PostgreSQL on
-Render, WhiteNoise for Django static files, and Cloudinary for persistent media.
-Local development remains SQLite plus the local `backend/media/` and
-`backend/private_media/`
-directories when `DATABASE_URL` and `CLOUDINARY_URL` are absent.
+Vercel hosts `frontend/`, Koyeb runs the Dockerized Django API, Neon provides
+PostgreSQL, and Cloudinary stores persistent public images and authenticated
+private invoices. Gmail SMTP sends transactional email. Local development keeps
+using SQLite and local media when `DATABASE_URL` and `CLOUDINARY_URL` are absent.
 
-### 1. Put the repository on GitHub
+### 1. Create Neon and Cloudinary resources
 
-This workspace is not currently a Git repository. Review generated migration
-fixtures before committing; `.env`, SQLite, local media, private invoices,
-static output, and frontend build output are ignored.
+Create a Neon Free PostgreSQL project and copy its pooled connection URL. Create
+a Cloudinary product environment and copy its server-side URL. Never commit
+either value or expose `CLOUDINARY_URL` through a Vercel `VITE_*` variable.
 
-```powershell
-git init
-git add .
-git commit -m "Prepare ecommerce app for production"
-git branch -M main
-git remote add origin https://github.com/YOUR_ACCOUNT/YOUR_REPOSITORY.git
-git push -u origin main
-```
-
-Do not add a real `.env`, exported production fixture, database backup, or media
-archive to Git.
-
-### 2. Create Cloudinary storage
-
-Create a Cloudinary product environment and copy its server-side URL into
-Render as `CLOUDINARY_URL`. The application uses authenticated server uploads:
+Cloudinary delivery is split by asset type:
 
 - Product primary/gallery images and the store logo use public image delivery.
-- Invoice PDFs use the `raw` resource type with `authenticated` delivery.
-- Invoice downloads remain behind the existing ownership-checked Django API and
-  use a five-minute signed Cloudinary download URL internally.
+- Invoice PDFs use authenticated raw delivery and five-minute signed URLs.
+- Invoice downloads remain protected by the existing ownership-checked API.
 
-Never put `CLOUDINARY_URL` in Vercel or browser-visible `VITE_*` variables.
+### 2. Migrate existing SQLite data and media
 
-### 3. Create the Render Blueprint
+Back up `backend/db.sqlite3`, `backend/media/`, and `backend/private_media/`,
+stop local writes, and export to a directory outside Git:
 
-Connect the GitHub repository from Render's **Blueprints** page and apply the
-root [`render.yaml`](render.yaml). It provisions `ecco-api` and PostgreSQL.
-The Docker image includes the native Pango libraries required by WeasyPrint;
-the pre-deploy command applies migrations, and Gunicorn serves `config.wsgi`.
+```powershell
+.\backend\venv\Scripts\python.exe backend\manage.py export_production_data C:\secure-transfer\ecco-production.json --confirm
+```
 
-Set these Render variables before the first production payment:
+The command writes a fixture plus a checksum manifest and excludes sessions,
+admin logs, generated permissions, environment variables, and credentials.
+Passwords remain hashed and primary keys, relationships, snapshots, provider
+references, and historical currencies are preserved.
+
+Temporarily set `DATABASE_URL` and `CLOUDINARY_URL` in the current PowerShell
+process. Do not write production credentials to a tracked file:
+
+```powershell
+$env:DATABASE_URL="<Neon pooled PostgreSQL URL>"
+$env:CLOUDINARY_URL="cloudinary://<api-key>:<api-secret>@<cloud-name>"
+$env:DJANGO_DEBUG="false"
+$env:DJANGO_SECRET_KEY="<temporary secure value>"
+
+.\backend\venv\Scripts\python.exe backend\manage.py migrate --noinput
+.\backend\venv\Scripts\python.exe backend\manage.py import_production_data C:\secure-transfer\ecco-production.json --confirm-empty
+.\backend\venv\Scripts\python.exe backend\manage.py migrate_media_to_cloudinary `
+  --source-media backend\media `
+  --source-private-media backend\private_media `
+  --confirm
+```
+
+Import refuses a populated application database, validates its manifest, runs
+transactionally, and verifies model counts. Media migration validates paths and
+images, uploads public and private assets using their correct storage classes,
+and verifies the result. Clear the temporary environment variables afterward.
+
+### 3. Deploy Django to Koyeb
+
+Create a Web Service from
+`https://github.com/SOA-WebCraft/react-django-eccommerce` using Docker, the
+repository root, one Free instance, and either Frankfurt or Washington. The
+container applies migrations on startup and launches Gunicorn on Koyeb's `PORT`.
+Configure `/api/categories/` as the health-check path.
+
+Set these Koyeb environment variables before deployment:
 
 ```text
+DATABASE_URL=<Neon pooled PostgreSQL URL>
+DJANGO_SECRET_KEY=<secure random value>
+DJANGO_DEBUG=false
+DJANGO_ALLOWED_HOSTS=<service>.koyeb.app
+DJANGO_CSRF_TRUSTED_ORIGINS=https://<project>.vercel.app
 CLOUDINARY_URL=cloudinary://<api-key>:<api-secret>@<cloud-name>
 FRONTEND_BASE_URL=https://<project>.vercel.app
-DJANGO_CSRF_TRUSTED_ORIGINS=https://<project>.vercel.app
 EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USE_TLS=true
-EMAIL_HOST_USER=<sender>
-EMAIL_HOST_PASSWORD=<app-password>
-DEFAULT_FROM_EMAIL=ECCO Store <sender@example.com>
-STRIPE_SECRET_KEY=<secret>
-STRIPE_WEBHOOK_SECRET=<webhook-secret>
+EMAIL_HOST_USER=<sender@gmail.com>
+EMAIL_HOST_PASSWORD=<Google app password>
+DEFAULT_FROM_EMAIL=ECCO Store <sender@gmail.com>
+STRIPE_SECRET_KEY=<secret-if-used>
+STRIPE_WEBHOOK_SECRET=<webhook-secret-if-used>
 PAYSTACK_SECRET_KEY=<secret-if-used>
 PAYPAL_CLIENT_ID=<id-if-used>
 PAYPAL_CLIENT_SECRET=<secret-if-used>
@@ -437,22 +459,13 @@ PAYMENT_SUCCESS_URL=https://<project>.vercel.app/checkout/confirmation/{checkout
 PAYMENT_CANCEL_URL=https://<project>.vercel.app/checkout?cancelled=1
 ```
 
-`DATABASE_URL` and `DJANGO_SECRET_KEY` are supplied by the Blueprint. Render's
-external hostname is automatically accepted by Django. Add custom hosts to
-`DJANGO_ALLOWED_HOSTS` later if custom domains are introduced.
+Use a Google app password, not the Gmail account password. The free Koyeb
+filesystem is not persistent; all relational data must remain in Neon and all
+uploaded files must remain in Cloudinary.
 
-The health check is `GET /api/categories/`. Before accepting payments, configure
-the provider dashboards with the production webhook endpoints:
+### 4. Deploy React to Vercel
 
-```text
-https://<api-service>.onrender.com/api/payments/stripe/webhook/
-https://<api-service>.onrender.com/api/payments/paystack/webhook/
-https://<api-service>.onrender.com/api/payments/paypal/webhook/
-```
-
-### 4. Deploy the frontend to Vercel
-
-Import the same repository and use:
+Import the same GitHub repository with these settings:
 
 ```text
 Root Directory: frontend
@@ -460,68 +473,45 @@ Install Command: npm ci
 Build Command: npm run build
 Output Directory: dist
 VITE_API_BASE_URL=/api
-RENDER_API_ORIGIN=https://<api-service>.onrender.com
+BACKEND_API_ORIGIN=https://<service>.koyeb.app
 ```
 
-[`frontend/vercel.json`](frontend/vercel.json) provides SPA routing. Vercel
-functions proxy `/api/*` and `/media/*` using the server-only
-`RENDER_API_ORIGIN`; the value is not shipped in browser JavaScript. The browser
-therefore keeps using same-origin `/api`, including Django's secure HttpOnly
-session and CSRF cookies. Redeploy Vercel after changing environment variables.
+`frontend/vercel.json` provides SPA routing. Server-side Vercel functions proxy
+`/api/*` and `/media/*` to `BACKEND_API_ORIGIN`; that value is not included in
+browser JavaScript. The browser therefore keeps same-origin secure session and
+CSRF cookies. Redeploy Vercel after changing either environment variable.
 
-### 5. Migrate existing SQLite data and media
+After Vercel assigns its final domain, update every Koyeb frontend, CSRF, and
+payment-return URL and redeploy the API.
 
-First back up `backend/db.sqlite3`, `backend/media/`, and
-`backend/private_media/`, stop local writes,
-and export from the local SQLite environment to a directory outside Git:
+### 5. Configure payment webhooks and verify
+
+Configure only enabled payment providers:
+
+```text
+https://<service>.koyeb.app/api/payments/stripe/webhook/
+https://<service>.koyeb.app/api/payments/paystack/webhook/
+https://<service>.koyeb.app/api/payments/paypal/webhook/
+```
+
+Verify catalog browsing, authentication and CSRF, cart and checkout, Gmail
+password-reset and purchase emails, public images, private invoice downloads,
+provider redirects, signed webhooks, and idempotent fulfillment.
+
+Production verification commands:
 
 ```powershell
-python backend/manage.py export_production_data C:\secure-transfer\ecco-production.json --confirm
+.\backend\venv\Scripts\python.exe backend\manage.py check
+.\backend\venv\Scripts\python.exe backend\manage.py check --deploy
+.\backend\venv\Scripts\python.exe backend\manage.py makemigrations --check --dry-run
+Push-Location backend
+.\venv\Scripts\python.exe manage.py test
+Pop-Location
+npm --prefix frontend run lint
+npm --prefix frontend run build
+docker build -t ecco-api .
 ```
 
-The command exports approved application records only and creates
-`ecco-production.manifest.json` with a SHA-256 checksum and model counts. It
-excludes sessions, admin logs, content types, generated permissions, environment
-variables, and credentials. Password hashes, primary keys, order snapshots,
-payment references, and historical currencies are preserved.
-
-Transfer both JSON files and the two media directories through a private channel.
-On an empty, migrated Render database, upload the fixture to a temporary private
-location and run:
-
-```text
-python manage.py import_production_data /secure/ecco-production.json --confirm-empty
-python manage.py migrate_media_to_cloudinary \
-  --source-media /secure/media \
-  --source-private-media /secure/private_media \
-  --confirm
-```
-
-Import refuses a populated application database, verifies the fixture checksum,
-runs transactionally, and compares every model count. Media migration validates
-all source paths and images before upload, then verifies every Cloudinary asset.
-Do not enable writes or payment webhooks until both commands succeed. Verify the
-superuser login, representative product images, a private invoice download,
-catalog/order counts, email, checkout, and webhook delivery afterward. Delete
-the temporary fixture and media archive when the migration has been audited.
-
-For a fresh production environment, skip export/import and create an admin from
-the Render Shell only after migrations:
-
-```text
-python manage.py createsuperuser
-```
-
-### Production verification commands
-
-```text
-python backend/manage.py check
-python backend/manage.py check --deploy
-python backend/manage.py makemigrations --check --dry-run
-cd backend && python manage.py test
-python backend/manage.py collectstatic --noinput
-```
-
-Run `docker build -t ecco-api .` on a machine with Docker before applying the
-Blueprint, then smoke-test PDF generation and Gunicorn locally. No external
-service, database, domain, or provider account is created by repository setup.
+Free Koyeb and Neon resources are appropriate for a hobby or demonstration
+store. Monitor cold starts, Neon compute/storage allowances, Cloudinary usage,
+and provider limits before accepting real production traffic.

@@ -57,9 +57,6 @@ ALLOWED_HOSTS = [
     ).split(',')
     if host.strip()
 ]
-if os.environ.get('RENDER_EXTERNAL_HOSTNAME'):
-    ALLOWED_HOSTS.append(os.environ['RENDER_EXTERNAL_HOSTNAME'])
-
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
     for origin in os.environ.get(
