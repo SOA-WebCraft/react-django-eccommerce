@@ -1,0 +1,168 @@
+import { useState } from 'react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { authApi } from '../api/services';
+import { ApiError, fieldErrors } from '../api/client';
+import { Alert, Button, Field } from '../components/ui';
+import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../hooks/useToast';
+export function LoginPage() {
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const { login } = useAuth();
+    const { notify } = useToast();
+    const location = useLocation();
+    const navigate = useNavigate();
+    const from = location.state?.from || '/account';
+    const submit = async (event) => {
+        event.preventDefault();
+        setLoading(true);
+        try {
+            const authenticatedUser = await login(username, password);
+            notify('Welcome back.', 'success');
+            const destination = authenticatedUser.can_manage_orders || authenticatedUser.can_manage_catalog ? '/' : from;
+            navigate(destination, { replace: true });
+        }
+        catch (reason) {
+            const message = reason instanceof Error ? reason.message : 'Unable to sign in.';
+            if (!(reason instanceof ApiError))
+                notify(message, 'error');
+        }
+        finally {
+            setLoading(false);
+        }
+    };
+    return <AuthShell title="Welcome back" intro="Sign in to see your bag, checkout, and view your orders.">
+    <form onSubmit={submit} className="auth-form">
+      <Field label="Username" name="username" autoComplete="username" required value={username} onChange={(e) => setUsername(e.target.value)}/>
+      <Field label="Password" name="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)}/>
+      <Button type="submit" disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</Button>
+    </form>
+    <p className="auth-help"><Link to="/forgot-password">Forgot your password?</Link></p>
+    <p className="auth-switch">New to ECCO? <Link to="/register">Create an account</Link></p>
+    <p className="session-note">Your secure session remains active across page reloads for up to eight hours.</p>
+  </AuthShell>;
+}
+export function RegisterPage() {
+    const [form, setForm] = useState({ username: '', email: '', password: '', confirm: '' });
+    const [loading, setLoading] = useState(false);
+    const { notify } = useToast();
+    const navigate = useNavigate();
+    const submit = async (event) => {
+        event.preventDefault();
+        const validation = {};
+        if (form.username.trim().length < 3)
+            validation.username = 'Use at least 3 characters.';
+        if (!form.email.includes('@'))
+            validation.email = 'Enter a valid email address.';
+        if (form.password.length < 8)
+            validation.password = 'Use at least 8 characters.';
+        if (form.password !== form.confirm)
+            validation.confirm = 'Passwords do not match.';
+        if (Object.keys(validation).length) {
+            Object.entries(validation).forEach(([field, message]) => notify(`${field}: ${message}`, 'error'));
+            return;
+        }
+        setLoading(true);
+        try {
+            await authApi.register({ username: form.username.trim(), email: form.email.trim(), password: form.password });
+            notify('Account created. Sign in to continue.', 'success');
+            navigate('/login');
+        }
+        catch (reason) {
+            if (!(reason instanceof ApiError)) {
+                notify('Unable to create your account.', 'error');
+            }
+        }
+        finally {
+            setLoading(false);
+        }
+    };
+    return <AuthShell title="Create your account" intro="Save your cart and keep every order in one place.">
+    <form onSubmit={submit} className="auth-form">
+      <Field label="Username" name="username" autoComplete="username" required value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })}/>
+      <Field label="Email address" name="email" type="email" autoComplete="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}/>
+      <Field label="Password" name="password" type="password" autoComplete="new-password" required hint="Use at least 8 characters and avoid common passwords." value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}/>
+      <Field label="Confirm password" name="confirm" type="password" autoComplete="new-password" required value={form.confirm} onChange={(e) => setForm({ ...form, confirm: e.target.value })}/>
+      <Button type="submit" disabled={loading}>{loading ? 'Creating account…' : 'Create account'}</Button>
+    </form>
+    <p className="auth-switch">Already have an account? <Link to="/login">Sign in</Link></p>
+  </AuthShell>;
+}
+export function ForgotPasswordPage() {
+    const [email, setEmail] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [submitted, setSubmitted] = useState(false);
+    const [error, setError] = useState('');
+    const submit = async (event) => {
+        event.preventDefault();
+        setError('');
+        if (!email.includes('@')) {
+            setError('Enter a valid email address.');
+            return;
+        }
+        setLoading(true);
+        try {
+            await authApi.requestPasswordReset(email.trim());
+            setSubmitted(true);
+        }
+        catch (reason) {
+            setError(reason instanceof Error ? reason.message : 'Unable to request a reset link.');
+        }
+        finally { setLoading(false); }
+    };
+    return <AuthShell title="Reset your password" intro="Enter the email address associated with your account.">
+      {submitted ? <><Alert kind="success">If an active account exists for that email address, a reset link has been sent. Check your inbox and spam folder.</Alert><p className="auth-switch"><Link to="/login">Return to sign in</Link></p></> : <form onSubmit={submit} className="auth-form">
+        <Field label="Email address" name="email" type="email" autoComplete="email" required value={email} error={error} onChange={(event) => setEmail(event.target.value)}/>
+        <Button type="submit" disabled={loading}>{loading ? 'Sending…' : 'Send reset link'}</Button>
+      </form>}
+    </AuthShell>;
+}
+
+export function ResetPasswordPage() {
+    const { uid = '', token = '' } = useParams();
+    const [form, setForm] = useState({ new_password: '', confirm_password: '' });
+    const [errors, setErrors] = useState({});
+    const [loading, setLoading] = useState(false);
+    const { notify } = useToast();
+    const navigate = useNavigate();
+    const submit = async (event) => {
+        event.preventDefault();
+        const validation = {};
+        if (form.new_password.length < 8)
+            validation.new_password = 'Use at least 8 characters.';
+        if (form.new_password !== form.confirm_password)
+            validation.confirm_password = 'Passwords do not match.';
+        if (Object.keys(validation).length) {
+            setErrors(validation);
+            return;
+        }
+        setErrors({});
+        setLoading(true);
+        try {
+            await authApi.confirmPasswordReset({ uid, token, ...form });
+            notify('Password reset successfully. Sign in with your new password.', 'success');
+            navigate('/login', { replace: true });
+        }
+        catch (reason) {
+            if (reason instanceof ApiError)
+                setErrors(fieldErrors(reason.data));
+            else
+                setErrors({ token: 'Unable to reset your password.' });
+        }
+        finally { setLoading(false); }
+    };
+    return <AuthShell title="Choose a new password" intro="Create a strong password you have not used before.">
+      {errors.token && <Alert>{errors.token}</Alert>}
+      <form onSubmit={submit} className="auth-form">
+        <Field label="New password" name="new_password" type="password" autoComplete="new-password" required hint="Use at least 8 characters and avoid common passwords." value={form.new_password} error={errors.new_password} onChange={(event) => setForm({ ...form, new_password: event.target.value })}/>
+        <Field label="Confirm new password" name="confirm_password" type="password" autoComplete="new-password" required value={form.confirm_password} error={errors.confirm_password} onChange={(event) => setForm({ ...form, confirm_password: event.target.value })}/>
+        <Button type="submit" disabled={loading}>{loading ? 'Resetting…' : 'Reset password'}</Button>
+      </form>
+      <p className="auth-switch"><Link to="/forgot-password">Request another reset link</Link></p>
+    </AuthShell>;
+}
+
+function AuthShell({ title, intro, children }) {
+    return <div className="auth-page"><div className="auth-panel"><Link className="brand" to="/">ECCO</Link><p className="eyebrow">Your account</p><h1>{title}</h1><p>{intro}</p>{children}</div><div className="auth-visual"><div><p className="eyebrow">Curated for better living</p><h2>One account.<br />Every essential.</h2></div></div></div>;
+}

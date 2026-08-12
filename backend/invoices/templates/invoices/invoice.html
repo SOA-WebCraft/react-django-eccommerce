@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+@page { size: A5 portrait; margin: 12mm; }
+* { box-sizing: border-box; }
+body { margin: 0; font: 10px Arial, sans-serif; color: #172033; }
+.header,.details,.summary-row { display: flex; justify-content: space-between; }
+.header { border-bottom: 1px solid #e5e7eb; padding-bottom: 16px; }
+h1 { margin: 0; font-size: 20px; } h2 { margin: 0; font-size: 22px; }
+.muted { color: #667085; line-height: 1.5; }
+.status { display: inline-block; margin-top: 8px; padding: 4px 8px; border-radius: 20px; background: #dcfce7; color: #166534; font-weight: bold; text-transform: uppercase; }
+.details { gap: 20px; margin-top: 18px; }.details>div { width: 50%; }
+.label { color: #98a2b3; font-size: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: .08em; }
+table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+th { background: #f8fafc; color: #475467; font-size: 8px; text-transform: uppercase; }
+th,td { padding: 8px 6px; border-bottom: 1px solid #e5e7eb; text-align: left; }
+th:nth-child(n+2),td:nth-child(n+2) { text-align: right; }
+.summary { width: 190px; margin: 15px 0 0 auto; }.summary-row { padding: 4px 0; }
+.total { margin-top: 5px; padding-top: 8px; border-top: 2px solid #172033; font-size: 13px; font-weight: bold; }
+.note { margin-top: 18px; padding: 10px; background: #f8fafc; border-radius: 8px; }
+.footer { margin-top: 18px; padding-top: 10px; border-top: 1px solid #e5e7eb; color: #98a2b3; text-align: center; font-size: 8px; }
+</style>
+</head>
+<body>
+<header class="header"><div><h1>{{ company_name }}</h1><div class="muted">{{ company_address }}<br>{{ support_email }}{% if tax_id %}<br>Tax ID: {{ tax_id }}{% endif %}</div></div><div style="text-align:right"><h2>Invoice</h2><div class="muted">{{ invoice.invoice_number }}</div><span class="status">{{ invoice.get_status_display }}</span></div></header>
+<section class="details"><div><div class="label">Bill to</div><strong>{{ invoice.billing_name|default:invoice.customer.username }}</strong><div class="muted">{{ invoice.billing_address }}<br>{{ invoice.billing_email }}</div></div><div><div class="summary-row"><span>Issue date</span><strong>{{ invoice.issued_at|date:"M d, Y" }}</strong></div><div class="summary-row"><span>Order</span><strong>#{{ invoice.order_id }}</strong></div><div class="summary-row"><span>Payment</span><strong>{{ invoice.payment_method|default:"Not recorded" }}</strong></div><div class="summary-row"><span>Currency</span><strong>{{ invoice.currency }}</strong></div></div></section>
+<table><thead><tr><th>Item</th><th>Qty</th><th>Unit price</th><th>Total</th></tr></thead><tbody>{% for item in invoice.order.items.all %}<tr><td><strong>{{ item.product_name }}</strong></td><td>{{ item.quantity }}</td><td>{{ invoice.currency }} {{ item.unit_price|floatformat:2 }}</td><td>{{ invoice.currency }} {{ item.line_total|floatformat:2 }}</td></tr>{% endfor %}</tbody></table>
+<section class="summary"><div class="summary-row"><span>Subtotal</span><strong>{{ invoice.currency }} {{ invoice.subtotal|floatformat:2 }}</strong></div><div class="summary-row"><span>Discount</span><strong>-{{ invoice.currency }} {{ invoice.discount|floatformat:2 }}</strong></div><div class="summary-row"><span>Shipping</span><strong>{{ invoice.currency }} {{ invoice.shipping|floatformat:2 }}</strong></div><div class="summary-row"><span>Tax</span><strong>{{ invoice.currency }} {{ invoice.tax|floatformat:2 }}</strong></div><div class="summary-row total"><span>Total</span><span>{{ invoice.currency }} {{ invoice.total|floatformat:2 }}</span></div></section>
+<section class="note"><strong>{% if invoice.status == "paid" %}Payment received{% else %}Legacy draft invoice{% endif %}</strong><br>Keep this invoice for your records.</section>
+<footer class="footer">This invoice was generated electronically and does not require a signature.</footer>
+</body>
+</html>
