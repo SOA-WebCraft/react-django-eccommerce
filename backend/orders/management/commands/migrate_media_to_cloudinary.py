@@ -28,18 +28,18 @@ class Command(BaseCommand):
         if not public_root.is_dir() or not private_root.is_dir():
             raise CommandError('Both source media directories must exist.')
         entries = self._entries(public_root, private_root)
-        missing = [str(path) for _, _, path, _ in entries if not path.is_file()]
+        missing = [str(path) for _, _, path, _, _ in entries if not path.is_file()]
         if missing:
             raise CommandError('Missing source files:\n' + '\n'.join(missing))
-        for _, _, path, image in entries:
-            if image:
+        for _, _, path, _, is_image in entries:
+            if is_image:
                 try:
                     with Image.open(path) as candidate:
                         candidate.verify()
                 except Exception as exc:
                     raise CommandError(f'Invalid image: {path}') from exc
         uploaded = 0
-        for model, pk, source, field_name in entries:
+        for model, pk, source, field_name, _ in entries:
             instance = model.objects.get(pk=pk)
             field = getattr(instance, field_name)
             old_name = field.name
@@ -55,15 +55,24 @@ class Command(BaseCommand):
     def _entries(public_root, private_root):
         entries = []
         for product in Product.objects.exclude(image='').exclude(image__isnull=True):
-            entries.append((Product, product.pk, public_root / product.image.name, 'image'))
+            entries.append((
+                Product, product.pk, public_root / product.image.name,
+                'image', True,
+            ))
         for image in ProductImage.objects.exclude(image='').exclude(image__isnull=True):
-            entries.append((ProductImage, image.pk, public_root / image.image.name, 'image'))
+            entries.append((
+                ProductImage, image.pk, public_root / image.image.name,
+                'image', True,
+            ))
         for store in StoreConfiguration.objects.exclude(logo='').exclude(logo__isnull=True):
-            entries.append((StoreConfiguration, store.pk, public_root / store.logo.name, 'logo'))
+            entries.append((
+                StoreConfiguration, store.pk, public_root / store.logo.name,
+                'logo', True,
+            ))
         for invoice in Invoice.objects.exclude(pdf_file='').exclude(pdf_file__isnull=True):
             entries.append((
                 Invoice, invoice.pk,
                 private_root / 'invoices' / invoice.pdf_file.name,
-                'pdf_file',
+                'pdf_file', False,
             ))
         return entries
