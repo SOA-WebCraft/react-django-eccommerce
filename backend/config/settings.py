@@ -49,6 +49,14 @@ SECRET_KEY = os.environ.get(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'true').lower() in ('1', 'true', 'yes')
 
+FRONTEND_BASE_URL = os.environ.get(
+    'FRONTEND_BASE_URL',
+    (
+        'http://localhost:5173'
+        if DEBUG
+        else 'https://ecco-storefront.vercel.app'
+    ),
+).rstrip('/')
 _configured_csrf_origins = os.environ.get(
     'DJANGO_CSRF_TRUSTED_ORIGINS',
     (
@@ -63,11 +71,11 @@ ALLOWED_HOSTS = allowed_hosts(
         'localhost,127.0.0.1',
     ),
     os.environ.get('RENDER_EXTERNAL_HOSTNAME', ''),
-    _configured_csrf_origins,
+    f'{_configured_csrf_origins},{FRONTEND_BASE_URL}',
 )
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
-    for origin in _configured_csrf_origins.split(',')
+    for origin in f'{_configured_csrf_origins},{FRONTEND_BASE_URL}'.split(',')
     if origin.strip()
 ]
 
@@ -245,10 +253,6 @@ INVOICE_SUPPORT_EMAIL = os.environ.get(
 )
 INVOICE_TAX_ID = os.environ.get('INVOICE_TAX_ID', '')
 
-FRONTEND_BASE_URL = os.environ.get(
-    'FRONTEND_BASE_URL',
-    'http://localhost:5173',
-).rstrip('/')
 PASSWORD_RESET_TIMEOUT = int(
     os.environ.get('PASSWORD_RESET_TIMEOUT_SECONDS', '3600')
 )
