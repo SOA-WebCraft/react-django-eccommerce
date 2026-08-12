@@ -15,7 +15,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from .environment import database_configuration
+from .environment import allowed_hosts, database_configuration
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -49,14 +49,13 @@ SECRET_KEY = os.environ.get(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'true').lower() in ('1', 'true', 'yes')
 
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.environ.get(
+ALLOWED_HOSTS = allowed_hosts(
+    os.environ.get(
         'DJANGO_ALLOWED_HOSTS',
         'localhost,127.0.0.1',
-    ).split(',')
-    if host.strip()
-]
+    ),
+    os.environ.get('RENDER_EXTERNAL_HOSTNAME', ''),
+)
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
     for origin in os.environ.get(

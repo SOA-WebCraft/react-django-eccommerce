@@ -3,11 +3,30 @@ from unittest.mock import patch
 from django.core.files.base import ContentFile
 from django.test import SimpleTestCase, override_settings
 
-from .environment import database_configuration
+from .environment import allowed_hosts, database_configuration
 from .storage import PrivateCloudinaryStorage, PublicCloudinaryStorage
 
 
 class ProductionDatabaseSettingsTests(SimpleTestCase):
+    def test_render_hostname_is_added_to_allowed_hosts(self):
+        self.assertEqual(
+            allowed_hosts(
+                'localhost,api.example.com',
+                'react-django-eccommerce.onrender.com',
+            ),
+            [
+                'localhost',
+                'api.example.com',
+                'react-django-eccommerce.onrender.com',
+            ],
+        )
+
+    def test_duplicate_platform_hostname_is_not_added(self):
+        self.assertEqual(
+            allowed_hosts('api.example.com', 'api.example.com'),
+            ['api.example.com'],
+        )
+
     def test_empty_database_url_preserves_sqlite_fallback(self):
         self.assertIsNone(database_configuration('', debug=True))
 
