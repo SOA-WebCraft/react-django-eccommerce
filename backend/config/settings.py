@@ -49,23 +49,25 @@ SECRET_KEY = os.environ.get(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'true').lower() in ('1', 'true', 'yes')
 
+_configured_csrf_origins = os.environ.get(
+    'DJANGO_CSRF_TRUSTED_ORIGINS',
+    (
+        'http://localhost:5173,http://127.0.0.1:5173'
+        if DEBUG
+        else ''
+    ),
+)
 ALLOWED_HOSTS = allowed_hosts(
     os.environ.get(
         'DJANGO_ALLOWED_HOSTS',
         'localhost,127.0.0.1',
     ),
     os.environ.get('RENDER_EXTERNAL_HOSTNAME', ''),
+    _configured_csrf_origins,
 )
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
-    for origin in os.environ.get(
-        'DJANGO_CSRF_TRUSTED_ORIGINS',
-        (
-            'http://localhost:5173,http://127.0.0.1:5173'
-            if DEBUG
-            else ''
-        ),
-    ).split(',')
+    for origin in _configured_csrf_origins.split(',')
     if origin.strip()
 ]
 

@@ -4,7 +4,16 @@
   "installCommand": "npm ci",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "rewrites": [
-    { "source": "/((?!api/|media/).*)", "destination": "/index.html" }
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "https://react-django-eccommerce.onrender.com/api/$1"
+    },
+    {
+      "src": "/media/(.*)",
+      "dest": "https://react-django-eccommerce.onrender.com/media/$1"
+    },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }

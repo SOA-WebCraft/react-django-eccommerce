@@ -27,6 +27,15 @@ class ProductionDatabaseSettingsTests(SimpleTestCase):
             ['api.example.com'],
         )
 
+    def test_csrf_origin_hostname_is_allowed_for_same_origin_proxy(self):
+        self.assertEqual(
+            allowed_hosts(
+                'api.example.com',
+                trusted_origins='https://ecco-storefront.vercel.app',
+            ),
+            ['api.example.com', 'ecco-storefront.vercel.app'],
+        )
+
     def test_empty_database_url_preserves_sqlite_fallback(self):
         self.assertIsNone(database_configuration('', debug=True))
 
