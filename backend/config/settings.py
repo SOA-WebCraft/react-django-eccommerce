@@ -57,6 +57,9 @@ FRONTEND_BASE_URL = os.environ.get(
         else 'https://ecco-storefront.vercel.app'
     ),
 ).rstrip('/')
+PRODUCTION_STOREFRONT_ORIGIN = (
+    'https://ecco-storefront.vercel.app' if not DEBUG else ''
+)
 _configured_csrf_origins = os.environ.get(
     'DJANGO_CSRF_TRUSTED_ORIGINS',
     (
@@ -71,11 +74,17 @@ ALLOWED_HOSTS = allowed_hosts(
         'localhost,127.0.0.1',
     ),
     os.environ.get('RENDER_EXTERNAL_HOSTNAME', ''),
-    f'{_configured_csrf_origins},{FRONTEND_BASE_URL}',
+    (
+        f'{_configured_csrf_origins},{FRONTEND_BASE_URL},'
+        f'{PRODUCTION_STOREFRONT_ORIGIN}'
+    ),
 )
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
-    for origin in f'{_configured_csrf_origins},{FRONTEND_BASE_URL}'.split(',')
+    for origin in (
+        f'{_configured_csrf_origins},{FRONTEND_BASE_URL},'
+        f'{PRODUCTION_STOREFRONT_ORIGIN}'
+    ).split(',')
     if origin.strip()
 ]
 
