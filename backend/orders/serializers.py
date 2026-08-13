@@ -278,6 +278,7 @@ class ShippingRateSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     invoice = InvoiceSerializer(read_only=True)
+    payment_provider = serializers.SerializerMethodField()
     timeline = OrderTimelineEventSerializer(
         source='timeline_events', many=True, read_only=True,
     )
@@ -302,6 +303,7 @@ class OrderSerializer(serializers.ModelSerializer):
             'total',
             'currency',
             'payment_status',
+            'payment_provider',
             'payment_method',
             'billing_name',
             'billing_email',
@@ -324,6 +326,21 @@ class OrderSerializer(serializers.ModelSerializer):
             'updated_at',
         )
         read_only_fields = fields
+
+    def get_payment_provider(self, order):
+        try:
+            return order.payment_transaction.provider
+        except PaymentTransaction.DoesNotExist:
+            normalized_method = order.payment_method.strip().lower()
+            if normalized_method in {
+                PaymentTransaction.Provider.STRIPE,
+                PaymentTransaction.Provider.PAYSTACK,
+                PaymentTransaction.Provider.PAYPAL,
+            }:
+                return normalized_method
+            if order.stripe_payment_intent:
+                return PaymentTransaction.Provider.STRIPE
+            return None
 
 
 class OrderCustomerSerializer(serializers.Serializer):

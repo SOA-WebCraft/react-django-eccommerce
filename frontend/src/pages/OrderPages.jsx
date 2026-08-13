@@ -284,7 +284,10 @@ function StaffOrderActions({ order, disabled, onInvoice, onRefund, onEmail }) {
 }
 
 function OrderInformation({ order, isStaff }) {
-    return <div className="order-information-grid">{isStaff && <section><h2>Customer info</h2><dl><div><dt>Username</dt><dd>{order.customer?.username}</dd></div><div><dt>Email</dt><dd>{order.billing_email || order.customer?.email || 'Not provided'}</dd></div><div><dt>Name</dt><dd>{order.billing_name || 'Not provided'}</dd></div></dl></section>}<section><h2>Shipping address</h2><address>{order.address || 'Not provided'}<br/>{[order.city, order.postal_code].filter(Boolean).join(', ')}<br/>{order.country}</address></section><section><h2>Payment & delivery</h2><dl><div><dt>Payment</dt><dd>{order.payment_method || 'Not provided'} · {order.payment_status}</dd></div><div><dt>Courier</dt><dd>{order.courier || 'Not assigned'}</dd></div><div><dt>Tracking number</dt><dd>{order.tracking_number || 'Not assigned'}</dd></div><div><dt>Invoice</dt><dd>{order.invoice?.invoice_number || 'Unavailable'}</dd></div></dl></section></div>;
+    const provider = order.payment_provider
+        ? order.payment_provider.charAt(0).toUpperCase() + order.payment_provider.slice(1)
+        : order.payment_method || 'Not provided';
+    return <div className="order-information-grid">{isStaff && <section><h2>Customer info</h2><dl><div><dt>Username</dt><dd>{order.customer?.username}</dd></div><div><dt>Email</dt><dd>{order.billing_email || order.customer?.email || 'Not provided'}</dd></div><div><dt>Name</dt><dd>{order.billing_name || 'Not provided'}</dd></div></dl></section>}<section><h2>Shipping address</h2><address>{order.address || 'Not provided'}<br/>{[order.city, order.postal_code].filter(Boolean).join(', ')}<br/>{order.country}</address></section><section><h2>Payment & delivery</h2><dl><div><dt>Payment method</dt><dd>{provider}</dd></div><div><dt>Payment status</dt><dd>{order.payment_status}</dd></div><div><dt>Courier</dt><dd>{order.courier || 'Not assigned'}</dd></div><div><dt>Tracking number</dt><dd>{order.tracking_number || 'Not assigned'}</dd></div><div><dt>Invoice</dt><dd>{order.invoice?.invoice_number || 'Unavailable'}</dd></div></dl></section></div>;
 }
 
 function OrderTimeline({ order }) {

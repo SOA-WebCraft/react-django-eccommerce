@@ -1075,7 +1075,12 @@ Errors may also be `401 Unauthorized`, `403 Forbidden`, or `404 Not Found`.
 
 Order responses also include shipping fields, `courier`, `tracking_number`, `shipped_at`,
 `delivered_at`, `cancelled_at`, a read-only `timeline` array, and the current
-`return_request` and `refund_request` objects when present.
+`return_request` and `refund_request` objects when present. The read-only
+`payment_provider` field identifies the provider that completed the payment,
+such as `stripe` or `paystack`; `payment_method` separately describes the
+provider channel, such as `Card` or `Mobile Money`. Historical orders without a
+linked payment transaction return `null` when their provider cannot be safely
+determined.
 
 ### POST `/api/orders/{id}/returns/`
 

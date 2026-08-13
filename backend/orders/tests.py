@@ -236,6 +236,22 @@ class CheckoutApiTests(APITestCase):
 
     def test_order_reads_and_checkout_status_are_owner_scoped(self):
         own = Order.objects.create(user=self.user, total=Decimal('1.00'))
+        own_attempt = CheckoutAttempt.objects.create(
+            user=self.user,
+            subtotal=Decimal('1.00'),
+            total=Decimal('1.00'),
+        )
+        PaymentTransaction.objects.create(
+            checkout=own_attempt,
+            order=own,
+            provider=PaymentTransaction.Provider.PAYSTACK,
+            method=PaymentTransaction.Method.CARD,
+            status=PaymentTransaction.Status.PAID,
+            store_amount=Decimal('1.00'),
+            store_currency='GHS',
+            provider_amount=Decimal('1.00'),
+            provider_currency='GHS',
+        )
         other = Order.objects.create(user=self.other, total=Decimal('2.00'))
         attempt = CheckoutAttempt.objects.create(
             user=self.other,
@@ -253,6 +269,10 @@ class CheckoutApiTests(APITestCase):
             own.order_number,
         )
         self.assertNotIn('customer', listing.data['results'][0])
+        self.assertEqual(
+            listing.data['results'][0]['payment_provider'],
+            PaymentTransaction.Provider.PAYSTACK,
+        )
         self.assertEqual(
             self.client.get(reverse('order-detail', args=(other.pk,))).status_code,
             status.HTTP_404_NOT_FOUND,

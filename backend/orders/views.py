@@ -206,6 +206,7 @@ class OrderListView(generics.ListAPIView):
         ).select_related(
             'invoice',
             'user',
+            'payment_transaction',
             'return_request',
             'refund_request',
         )
@@ -235,6 +236,7 @@ class OrderDetailView(generics.RetrieveAPIView):
         ).select_related(
             'invoice',
             'user',
+            'payment_transaction',
             'return_request',
             'refund_request',
         )
