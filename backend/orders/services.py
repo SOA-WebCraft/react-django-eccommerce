@@ -381,6 +381,8 @@ def _request_json(url, *, method='GET', data=None, headers=None):
     body = json.dumps(data).encode() if data is not None else None
     request = Request(url, data=body, method=method, headers={
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'ECCO-Store-Backend/1.0',
         **(headers or {}),
     })
     try:

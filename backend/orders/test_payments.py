@@ -208,3 +208,17 @@ class PaystackCheckoutTests(TestCase):
                 'https://api.paystack.co/transaction/initialize',
                 method='POST', data={'amount': 100},
             )
+
+    @patch('orders.services.urlopen')
+    def test_provider_request_sends_explicit_json_headers(self, urlopen):
+        response = urlopen.return_value.__enter__.return_value
+        response.read.return_value = b'{"status": true}'
+        _request_json(
+            'https://api.paystack.co/transaction/initialize',
+            method='POST', data={'amount': 100},
+        )
+        request = urlopen.call_args.args[0]
+        self.assertEqual(request.get_header('Accept'), 'application/json')
+        self.assertEqual(
+            request.get_header('User-agent'), 'ECCO-Store-Backend/1.0'
+        )
