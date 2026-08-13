@@ -9,7 +9,7 @@ export const authApi = {
         method: 'POST',
         body: JSON.stringify(body),
     }),
-    logout: () => apiRequest('/users/logout/', { method: 'POST' }),
+    logout: () => apiRequest('/users/logout/', { method: 'POST' }, false),
     requestPasswordReset: (email) => apiRequest('/users/password-reset/', {
         method: 'POST',
         body: JSON.stringify({ email }),

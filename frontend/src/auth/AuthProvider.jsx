@@ -35,6 +35,9 @@ export function AuthProvider({ children }) {
             try {
                 await authApi.logout();
             }
+            catch {
+                // Logout is complete locally even if the server session expired.
+            }
             finally {
                 setUser(null);
             }
