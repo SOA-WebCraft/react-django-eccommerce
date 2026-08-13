@@ -22,6 +22,21 @@ class PaymentReturnUrlSettingsTests(SimpleTestCase):
             )
         importlib.reload(importlib.import_module('config.settings'))
 
+    def test_common_checkout_placeholder_is_normalized(self):
+        import importlib
+
+        with patch.dict('os.environ', {
+            'DJANGO_DEBUG': 'false',
+            'FRONTEND_BASE_URL': 'https://store.example.com',
+            'PAYMENT_SUCCESS_URL': 'https://store.example.com/checkout/confirmation/<checkout-id>',
+        }, clear=False):
+            module = importlib.reload(importlib.import_module('config.settings'))
+            self.assertEqual(
+                module.PAYMENT_SUCCESS_URL.format(checkout_id='abc-123'),
+                'https://store.example.com/checkout/confirmation/abc-123',
+            )
+        importlib.reload(importlib.import_module('config.settings'))
+
 
 class ProductionDatabaseSettingsTests(SimpleTestCase):
     def test_render_hostname_is_added_to_allowed_hosts(self):

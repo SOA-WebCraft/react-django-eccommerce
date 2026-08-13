@@ -263,7 +263,14 @@ def frontend_return_url(name, path):
     value = os.environ.get(name, '').strip()
     if not DEBUG and value.startswith(('http://localhost', 'http://127.0.0.1')):
         value = ''
-    return value or f'{FRONTEND_BASE_URL}{path}'
+    value = value or f'{FRONTEND_BASE_URL}{path}'
+    if 'confirmation' in value:
+        value = value.replace('<checkout-id>', '{checkout_id}')
+        value = value.replace('<checkout_id>', '{checkout_id}')
+        value = value.replace('{checkout-id}', '{checkout_id}')
+        if '{checkout_id}' not in value:
+            value = f'{value.rstrip("/")}/{{checkout_id}}'
+    return value
 
 
 STRIPE_SUCCESS_URL = frontend_return_url(
