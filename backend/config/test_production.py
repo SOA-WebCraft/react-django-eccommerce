@@ -7,6 +7,22 @@ from .environment import allowed_hosts, database_configuration
 from .storage import PrivateCloudinaryStorage, PublicCloudinaryStorage
 
 
+class PaymentReturnUrlSettingsTests(SimpleTestCase):
+    def test_production_ignores_localhost_payment_return_url(self):
+        import importlib
+        with patch.dict('os.environ', {
+            'DJANGO_DEBUG': 'false',
+            'FRONTEND_BASE_URL': 'https://store.example.com',
+            'PAYMENT_SUCCESS_URL': 'http://127.0.0.1:5173/checkout/confirmation/{checkout_id}',
+        }, clear=False):
+            module = importlib.reload(importlib.import_module('config.settings'))
+            self.assertEqual(
+                module.PAYMENT_SUCCESS_URL,
+                'https://store.example.com/checkout/confirmation/{checkout_id}',
+            )
+        importlib.reload(importlib.import_module('config.settings'))
+
+
 class ProductionDatabaseSettingsTests(SimpleTestCase):
     def test_render_hostname_is_added_to_allowed_hosts(self):
         self.assertEqual(

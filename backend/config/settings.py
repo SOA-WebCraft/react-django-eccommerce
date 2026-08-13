@@ -259,13 +259,18 @@ STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '')
 PUBLISHED_SECRET_KEY = os.environ.get('PUBLISHED_SECRET_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
 STRIPE_GHS_TO_USD_RATE = os.environ.get('STRIPE_GHS_TO_USD_RATE', '0.065')
-STRIPE_SUCCESS_URL = os.environ.get(
-    'STRIPE_SUCCESS_URL',
-    'http://localhost:5173/checkout/confirmation/{checkout_id}',
+def frontend_return_url(name, path):
+    value = os.environ.get(name, '').strip()
+    if not DEBUG and value.startswith(('http://localhost', 'http://127.0.0.1')):
+        value = ''
+    return value or f'{FRONTEND_BASE_URL}{path}'
+
+
+STRIPE_SUCCESS_URL = frontend_return_url(
+    'STRIPE_SUCCESS_URL', '/checkout/confirmation/{checkout_id}',
 )
-STRIPE_CANCEL_URL = os.environ.get(
-    'STRIPE_CANCEL_URL',
-    'http://localhost:5173/checkout?cancelled=1',
+STRIPE_CANCEL_URL = frontend_return_url(
+    'STRIPE_CANCEL_URL', '/checkout?cancelled=1',
 )
 STORE_CURRENCY = os.environ.get('STORE_CURRENCY', 'GHS').upper()
 STORE_TAX_RATE = os.environ.get('STORE_TAX_RATE', '0.075')
@@ -301,12 +306,11 @@ PAYPAL_API_BASE = os.environ.get(
     'PAYPAL_API_BASE', 'https://api-m.sandbox.paypal.com'
 ).rstrip('/')
 PAYPAL_GHS_TO_USD_RATE = os.environ.get('PAYPAL_GHS_TO_USD_RATE', '0.065')
-PAYMENT_SUCCESS_URL = os.environ.get(
-    'PAYMENT_SUCCESS_URL',
-    'http://127.0.0.1:5173/checkout/confirmation/{checkout_id}',
+PAYMENT_SUCCESS_URL = frontend_return_url(
+    'PAYMENT_SUCCESS_URL', '/checkout/confirmation/{checkout_id}',
 )
-PAYMENT_CANCEL_URL = os.environ.get(
-    'PAYMENT_CANCEL_URL', 'http://127.0.0.1:5173/checkout?cancelled=1'
+PAYMENT_CANCEL_URL = frontend_return_url(
+    'PAYMENT_CANCEL_URL', '/checkout?cancelled=1',
 )
 EMAIL_BACKEND = os.environ.get(
     'EMAIL_BACKEND',
