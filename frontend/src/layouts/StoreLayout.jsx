@@ -4,12 +4,14 @@ import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { catalogApi } from '../api/services';
 import { useAuth } from '../hooks/useAuth';
 import { useCart } from '../hooks/useCart';
+import { useToast } from '../hooks/useToast';
 export function StoreLayout() {
     const [categories, setCategories] = useState([]);
     const [menuOpen, setMenuOpen] = useState(false);
     const [search, setSearch] = useState('');
     const { user, isAuthenticated, logout } = useAuth();
     const { count, clearLocal } = useCart();
+    const { notify } = useToast();
     const navigate = useNavigate();
     useEffect(() => {
         catalogApi.categories().then((data) => setCategories(data.results)).catch(() => undefined);
@@ -38,7 +40,7 @@ export function StoreLayout() {
             {isAuthenticated ? (<div className="user-menu">
                 {(user?.can_manage_orders || user?.can_manage_catalog || user?.can_manage_settings) && <NavLink to={user?.can_manage_orders || user?.can_manage_catalog ? '/staff/dashboard' : '/staff/settings'}>Dashboard</NavLink>}
                 <NavLink to="/account">Hi, {user?.username}</NavLink>
-                <button onClick={() => { void logout().finally(() => { clearLocal(); navigate('/'); }); }}>Logout</button>
+                <button onClick={() => { void logout().finally(() => { clearLocal(); notify('You have been logged out.', 'success'); navigate('/'); }); }}>Logout</button>
               </div>) : (<NavLink to="/login">Sign in</NavLink>)}
             <NavLink to="/cart" className="cart-link" aria-label={`Cart with ${count} items`}>
               <FiShoppingCart className="cart-link__icon" aria-hidden="true"/>
