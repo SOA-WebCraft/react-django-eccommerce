@@ -5,7 +5,7 @@ function normalizeApiBase(value) {
         return base.replace(/\/+$/, '');
     return `/${base.replace(/^\/+|\/+$/g, '')}`;
 }
-const API_BASE = normalizeApiBase(import.meta.env.VITE_API_BASE_URL);
+export const API_BASE = normalizeApiBase(import.meta.env.VITE_API_BASE_URL);
 let unauthorizedHandler = null;
 
 export function onUnauthorized(handler) {

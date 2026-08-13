@@ -406,7 +406,29 @@ def _request_json(url, *, method='GET', data=None, headers=None):
     try:
         with urlopen(request, timeout=20) as response:
             return json.loads(response.read().decode())
-    except (HTTPError, URLError, ValueError) as exc:
+    except HTTPError as exc:
+        provider_message = ''
+        try:
+            provider_payload = json.loads(exc.read().decode())
+            provider_message = str(provider_payload.get('message', ''))[:300]
+        except (ValueError, UnicodeDecodeError):
+            pass
+        logger.warning(
+            'Payment provider request failed: host=%s status=%s message=%s',
+            url.split('/', 3)[2],
+            exc.code,
+            provider_message or 'No provider message returned.',
+        )
+        raise ValidationError({
+            'payment': provider_message
+            or 'The payment provider rejected the checkout request.'
+        }) from exc
+    except (URLError, ValueError) as exc:
+        logger.warning(
+            'Payment provider request could not be completed: host=%s error=%s',
+            url.split('/', 3)[2],
+            exc.reason if isinstance(exc, URLError) else type(exc).__name__,
+        )
         raise ValidationError({'payment': 'The payment provider could not initialize checkout.'}) from exc
 
 
@@ -503,8 +525,16 @@ def create_hosted_payment(user, validated_data):
                     'metadata': {'checkout_id': str(attempt.pk)},
                 },
             )
+            if response.get('status') is not True:
+                raise ValidationError({
+                    'payment': 'Paystack could not initialize checkout.'
+                })
             provider_reference = response['data']['reference']
             checkout_url = response['data']['authorization_url']
+            if not provider_reference or not checkout_url.startswith('https://'):
+                raise ValidationError({
+                    'payment': 'Paystack returned an invalid checkout response.'
+                })
             provider_amount, provider_currency, rate = attempt.total, 'GHS', Decimal('1')
         else:
             rate = Decimal(settings.PAYPAL_GHS_TO_USD_RATE)

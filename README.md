@@ -333,6 +333,40 @@ after changing `.env`. Staff can review internal transaction and revenue
 summaries at `http://127.0.0.1:5173/staff/payments`; these reports are not bank
 settlement statements.
 
+### Paystack setup
+
+Create or open a Ghana Paystack business, then copy the test keys from
+**Settings → API Keys & Webhooks** into the ignored `backend/.env`:
+
+```ini
+PAYSTACK_PUBLIC_KEY=pk_test_...
+PAYSTACK_SECRET_KEY=sk_test_...
+PAYMENT_SUCCESS_URL=http://127.0.0.1:5173/checkout/confirmation/{checkout_id}
+PAYMENT_CANCEL_URL=http://127.0.0.1:5173/checkout?cancelled=1
+```
+
+Only the secret key is needed by the hosted server flow; the public key is kept
+for provider configuration status and possible future client widgets. Never put
+the secret key in React or Vercel frontend variables. In Paystack's dashboard,
+set the webhook URL to:
+
+```text
+https://<backend-domain>/api/payments/paystack/webhook/
+```
+
+For the current deployed backend this is:
+
+```text
+https://react-django-eccommerce.onrender.com/api/payments/paystack/webhook/
+```
+
+For production, replace both payment return URLs with the stable Vercel domain,
+restart/redeploy Django, and make a Paystack test-mode purchase. The order is
+created only after a signed `charge.success` webhook or a successful server-side
+transaction verification with matching reference, GHS amount, and currency.
+Switch to `pk_live_...` and `sk_live_...` only after Paystack has activated the
+business and the complete test flow succeeds.
+
 Staff shipping management is available at
 `http://127.0.0.1:5173/staff/shipping`. It lists orders ready to ship and manages
 standard, express, and pickup methods, geographic zones, and rates. Courier and
@@ -515,3 +549,22 @@ docker build -t ecco-api .
 Free Koyeb and Neon resources are appropriate for a hobby or demonstration
 store. Monitor cold starts, Neon compute/storage allowances, Cloudinary usage,
 and provider limits before accepting real production traffic.
+
+### Social sign-in
+
+Google, Apple, Facebook, and LinkedIn sign-in buttons appear only when that
+provider is configured. Add the corresponding `*_OAUTH_CLIENT_ID` and
+`*_OAUTH_CLIENT_SECRET` variables from `backend/.env.example` to the backend
+environment. Apple additionally requires its Team ID, Key ID, service ID, and
+private key. Never put these credentials in Vercel or frontend variables.
+
+Register this callback for each provider (replace the domain in production):
+
+```text
+http://127.0.0.1:5173/api/users/social-login/<provider>/callback/
+https://ecco-storefront.vercel.app/api/users/social-login/<provider>/callback/
+```
+
+Use `google`, `apple`, `facebook`, or `linkedin` for `<provider>`. Restart Django
+after changing local credentials and redeploy the backend after changing hosted
+credentials.

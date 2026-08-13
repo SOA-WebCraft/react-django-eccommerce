@@ -2,7 +2,7 @@ import { Route, Routes } from 'react-router-dom';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { StoreLayout } from './layouts/StoreLayout';
 import { StaffDashboardLayout } from './layouts/StaffDashboardLayout';
-import { ForgotPasswordPage, LoginPage, RegisterPage, ResetPasswordPage } from './pages/AuthPages';
+import { ForgotPasswordPage, LoginPage, RegisterPage, ResetPasswordPage, SocialAuthCallbackPage } from './pages/AuthPages';
 import { CartPage } from './pages/CartPage';
 import { CheckoutPage, ConfirmationPage } from './pages/CheckoutPages';
 import { HomePage } from './pages/HomePage';
@@ -28,6 +28,7 @@ export default function App() {
         <Route path="register" element={<RegisterPage />}/>
         <Route path="forgot-password" element={<ForgotPasswordPage />}/>
         <Route path="reset-password/:uid/:token" element={<ResetPasswordPage />}/>
+        <Route path="auth/social/callback" element={<SocialAuthCallbackPage />}/>
         <Route element={<ProtectedRoute />}>
           <Route path="cart" element={<CartPage />}/>
           <Route path="checkout" element={<CheckoutPage />}/>

@@ -10,7 +10,8 @@ fetch("/api/cart/", { credentials: "include" })
 The authentication credential is an HttpOnly `sessionid` cookie. Before login,
 registration, or any other unsafe request, call `GET /api/users/csrf/`, read the
 JavaScript-accessible `csrftoken` cookie, and send it as `X-CSRFToken`. Cookies
-use `SameSite=Lax`; production cookies are Secure and must travel over HTTPS.
+use `SameSite=Lax` locally. Production defaults to `SameSite=None` and Secure so
+Apple's cross-site form-post callback can retain OAuth state; HTTPS is required.
 
 List responses are paginated with `count`, `next`, `previous`, and `results`.
 Validation errors use DRF's field-based JSON structure. Unless noted otherwise,
@@ -18,6 +19,36 @@ authenticated failures return `401`, permission failures return `403`, and missi
 or inaccessible objects return `404`.
 
 ## Users and authentication
+
+### GET `/api/users/social-providers/`
+
+Returns the supported social sign-in providers and whether each is configured.
+Authentication, parameters, and a request body are not required. Provider
+credentials are never included.
+
+Success — `200 OK`:
+
+```json
+{"results":[{"provider":"google","label":"Google","enabled":true},{"provider":"linkedin","label":"LinkedIn","enabled":false}]}
+```
+
+### GET `/api/users/social-login/{provider}/`
+
+Starts sign-up or sign-in with `google`, `apple`, `facebook`, or `linkedin` and
+redirects to that provider. An optional relative `next` query parameter controls
+the post-login frontend destination; external destinations are rejected. No
+authentication or request body is required. An unknown provider returns `404`;
+an unconfigured provider returns `503`.
+
+### GET/POST `/api/users/social-login/{provider}/callback/`
+
+OAuth callback used by the configured provider. It validates provider state and
+the signed identity response, requires a verified email, creates or links the
+local account, creates a normal secure Django session, and redirects to
+`/auth/social/callback` on the configured frontend. Apple uses `POST`; the other
+providers normally use `GET`. Provider access tokens are not stored. Failed,
+denied, or ambiguous-email callbacks redirect with a safe error message.
+
 
 ### GET `/api/users/csrf/`
 
@@ -1267,7 +1298,10 @@ All `/api/staff/payments/` endpoints return `401` without authentication and
 
 Receives Paystack events. It is public but requires a valid
 `X-Paystack-Signature`, validates checkout reference, currency, and amount, and
-fulfills a successful payment once. Invalid signatures return `400`; accepted
+requires Paystack's transaction status to be `success`. When metadata includes a
+`checkout_id`, it must match the stored checkout attempt. Successful replayed
+events are idempotent and never create a second order or decrement stock twice.
+Invalid signatures return `400`; accepted
 events return `200`.
 
 ### POST `/api/payments/paypal/webhook/`

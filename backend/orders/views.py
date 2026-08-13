@@ -787,9 +787,17 @@ class PaystackWebhookView(APIView):
                 )
             except PaymentTransaction.DoesNotExist:
                 return HttpResponse(status=200)
+            try:
+                amount = Decimal(str(data.get('amount', '')))
+            except (ValueError, TypeError, ArithmeticError):
+                amount = Decimal('-1')
+            metadata = data.get('metadata') or {}
             if (
-                data.get('currency') == payment.provider_currency
-                and Decimal(str(data.get('amount', 0))) == payment.provider_amount * 100
+                data.get('status') == 'success'
+                and data.get('currency') == payment.provider_currency
+                and amount == payment.provider_amount * 100
+                and str(metadata.get('checkout_id', payment.checkout_id))
+                == str(payment.checkout_id)
             ):
                 authorization = data.get('authorization') or {}
                 _complete_paid_checkout(

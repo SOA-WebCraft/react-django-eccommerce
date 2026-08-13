@@ -57,6 +57,26 @@ FRONTEND_BASE_URL = os.environ.get(
         else 'https://ecco-storefront.vercel.app'
     ),
 ).rstrip('/')
+SOCIAL_AUTH = {
+    'google': {
+        'client_id': os.environ.get('GOOGLE_OAUTH_CLIENT_ID', ''),
+        'client_secret': os.environ.get('GOOGLE_OAUTH_CLIENT_SECRET', ''),
+    },
+    'apple': {
+        'client_id': os.environ.get('APPLE_OAUTH_CLIENT_ID', ''),
+        'team_id': os.environ.get('APPLE_OAUTH_TEAM_ID', ''),
+        'key_id': os.environ.get('APPLE_OAUTH_KEY_ID', ''),
+        'private_key': os.environ.get('APPLE_OAUTH_PRIVATE_KEY', ''),
+    },
+    'facebook': {
+        'client_id': os.environ.get('FACEBOOK_OAUTH_CLIENT_ID', ''),
+        'client_secret': os.environ.get('FACEBOOK_OAUTH_CLIENT_SECRET', ''),
+    },
+    'linkedin': {
+        'client_id': os.environ.get('LINKEDIN_OAUTH_CLIENT_ID', ''),
+        'client_secret': os.environ.get('LINKEDIN_OAUTH_CLIENT_SECRET', ''),
+    },
+}
 PRODUCTION_STOREFRONT_ORIGIN = (
     'https://ecco-storefront.vercel.app' if not DEBUG else ''
 )
@@ -223,7 +243,10 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = not DEBUG
-SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = os.environ.get(
+    'SESSION_COOKIE_SAMESITE',
+    'Lax' if DEBUG else 'None',
+)
 SESSION_COOKIE_AGE = 60 * 60 * 8
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 CSRF_COOKIE_SECURE = not DEBUG

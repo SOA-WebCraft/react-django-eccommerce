@@ -31,6 +31,11 @@ export function AuthProvider({ children }) {
             setUser(authenticatedUser);
             return authenticatedUser;
         },
+        async restoreSession() {
+            const authenticatedUser = await authApi.me(false);
+            setUser(authenticatedUser);
+            return authenticatedUser;
+        },
         async logout() {
             try {
                 await authApi.logout();

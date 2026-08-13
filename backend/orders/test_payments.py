@@ -1,10 +1,19 @@
+import hashlib
+import hmac
+import json
+from io import BytesIO
 from decimal import Decimal
+from unittest.mock import patch
+from urllib.error import HTTPError
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from cart.models import Cart, CartItem
+from catalog.models import Category, Product
 from .models import CheckoutAttempt, PaymentTransaction
+from .services import _request_json
 
 
 class StaffPaymentApiTests(TestCase):
@@ -59,3 +68,140 @@ class StaffPaymentApiTests(TestCase):
             {'paystack', 'store_credit'},
         )
         self.assertNotIn('paystack-test', str(response.data))
+
+
+class PaystackCheckoutTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='paystack-buyer', email='buyer@example.com',
+            password='safe-password',
+        )
+        category = Category.objects.create(name='Phones', slug='phones-paystack')
+        self.product = Product.objects.create(
+            category=category, name='Test Phone', slug='test-phone-paystack',
+            price='100.00', stock_quantity=5,
+        )
+        cart = Cart.objects.create(user=self.user)
+        CartItem.objects.create(cart=cart, product=self.product, quantity=1)
+        self.client.force_login(self.user)
+        self.payload = {
+            'provider': 'paystack', 'method': 'mobile_money',
+            'billing_name': 'Paystack Buyer',
+            'billing_email': 'buyer@example.com',
+            'address': '1 Main Street', 'city': 'Accra',
+            'postal_code': 'GA1', 'country': 'Ghana',
+        }
+
+    @override_settings(PAYSTACK_SECRET_KEY='sk_test_paystack')
+    @patch('orders.services._request_json')
+    def test_checkout_initializes_paystack_on_server(self, request_json):
+        request_json.return_value = {
+            'status': True,
+            'data': {
+                'reference': 'paystack-reference-1',
+                'authorization_url': 'https://checkout.paystack.com/access-code',
+            },
+        }
+        response = self.client.post(
+            reverse('hosted-payment'), json.dumps(self.payload),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data['provider'], 'paystack')
+        self.assertEqual(
+            response.data['checkout_url'],
+            'https://checkout.paystack.com/access-code',
+        )
+        transaction = PaymentTransaction.objects.get()
+        self.assertEqual(transaction.provider_reference, 'paystack-reference-1')
+        sent = request_json.call_args.kwargs
+        self.assertEqual(sent['data']['currency'], 'GHS')
+        self.assertEqual(sent['data']['channels'], ['mobile_money'])
+        self.assertEqual(sent['data']['amount'], int(transaction.provider_amount * 100))
+        self.assertNotIn('sk_test_paystack', str(response.data))
+
+    @override_settings(PAYSTACK_SECRET_KEY='sk_test_paystack')
+    @patch('orders.services._request_json')
+    def test_invalid_paystack_initialization_does_not_create_transaction(self, request_json):
+        request_json.return_value = {'status': False, 'message': 'Rejected'}
+        response = self.client.post(
+            reverse('hosted-payment'), json.dumps(self.payload),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(PaymentTransaction.objects.exists())
+        attempt = CheckoutAttempt.objects.get()
+        self.assertEqual(attempt.status, CheckoutAttempt.Status.FAILED)
+
+    @override_settings(PAYSTACK_SECRET_KEY='sk_test_paystack')
+    @patch('orders.views.send_order_confirmation')
+    @patch('orders.views.generate_invoice_pdf')
+    def test_signed_success_webhook_fulfills_once(
+        self, generate_invoice_pdf, send_order_confirmation,
+    ):
+        from orders.services import _create_payment_attempt
+        attempt = _create_payment_attempt(self.user, {
+            key: value for key, value in self.payload.items()
+            if key not in {'provider', 'method'}
+        })
+        PaymentTransaction.objects.create(
+            checkout=attempt, provider='paystack', method='mobile_money',
+            provider_reference='paystack-reference-2', status='pending',
+            store_amount=attempt.total, store_currency='GHS',
+            provider_amount=attempt.total, provider_currency='GHS',
+        )
+        event = {
+            'event': 'charge.success',
+            'data': {
+                'reference': 'paystack-reference-2', 'status': 'success',
+                'amount': int(attempt.total * 100), 'currency': 'GHS',
+                'metadata': {'checkout_id': str(attempt.pk)},
+                'authorization': {'brand': 'visa'},
+            },
+        }
+        body = json.dumps(event, separators=(',', ':')).encode()
+        signature = hmac.new(
+            b'sk_test_paystack', body, hashlib.sha512,
+        ).hexdigest()
+        self.client.logout()
+        for _ in range(2):
+            response = self.client.post(
+                reverse('paystack-webhook'), body,
+                content_type='application/json',
+                HTTP_X_PAYSTACK_SIGNATURE=signature,
+            )
+            self.assertEqual(response.status_code, 200)
+        attempt.refresh_from_db()
+        self.product.refresh_from_db()
+        transaction = PaymentTransaction.objects.get(checkout=attempt)
+        self.assertEqual(attempt.status, CheckoutAttempt.Status.FULFILLED)
+        self.assertEqual(transaction.status, PaymentTransaction.Status.PAID)
+        self.assertEqual(transaction.card_brand, 'visa')
+        self.assertEqual(self.product.stock_quantity, 4)
+        self.assertEqual(attempt.user.orders.count(), 1)
+
+    @override_settings(PAYSTACK_SECRET_KEY='sk_test_paystack')
+    def test_webhook_rejects_invalid_signature(self):
+        response = self.client.post(
+            reverse('paystack-webhook'), b'{}',
+            content_type='application/json',
+            HTTP_X_PAYSTACK_SIGNATURE='invalid',
+        )
+        self.assertEqual(response.status_code, 400)
+
+    @patch('orders.services.urlopen')
+    def test_paystack_error_message_is_returned_without_secrets(self, urlopen):
+        urlopen.side_effect = HTTPError(
+            'https://api.paystack.co/transaction/initialize', 400,
+            'Bad Request', {}, BytesIO(json.dumps({
+                'status': False,
+                'message': 'Currency not supported by integration.',
+            }).encode()),
+        )
+        with self.assertRaisesMessage(
+            Exception, 'Currency not supported by integration.'
+        ):
+            _request_json(
+                'https://api.paystack.co/transaction/initialize',
+                method='POST', data={'amount': 100},
+            )

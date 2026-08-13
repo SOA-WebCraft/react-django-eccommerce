@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { authApi } from '../api/services';
 import { ApiError, fieldErrors } from '../api/client';
@@ -41,6 +41,7 @@ export function LoginPage() {
     <p className="auth-help"><Link to="/forgot-password">Forgot your password?</Link></p>
     <p className="auth-switch">New to ECCO? <Link to="/register">Create an account</Link></p>
     <p className="session-note">Your secure session remains active across page reloads for up to eight hours.</p>
+    <SocialLoginButtons next={from}/>
   </AuthShell>;
 }
 export function RegisterPage() {
@@ -86,8 +87,51 @@ export function RegisterPage() {
       <Field label="Confirm password" name="confirm" type="password" autoComplete="new-password" required value={form.confirm} onChange={(e) => setForm({ ...form, confirm: e.target.value })}/>
       <Button type="submit" disabled={loading}>{loading ? 'Creating account…' : 'Create account'}</Button>
     </form>
+    <SocialLoginButtons next="/account"/>
     <p className="auth-switch">Already have an account? <Link to="/login">Sign in</Link></p>
   </AuthShell>;
+}
+
+function SocialLoginButtons({ next }) {
+    const [providers, setProviders] = useState([]);
+    useEffect(() => {
+        authApi.socialProviders().then((data) => setProviders(data.results || [])).catch(() => setProviders([]));
+    }, []);
+    const enabled = providers.filter((provider) => provider.enabled);
+    if (!enabled.length)
+        return null;
+    return <div className="social-login" aria-label="Social sign in">
+      <div className="auth-divider"><span>or continue with</span></div>
+      <div className="social-login__grid">
+        {enabled.map((provider) => <a className={`social-button social-button--${provider.provider}`} href={authApi.socialLoginUrl(provider.provider, next)} key={provider.provider}>
+          <span aria-hidden="true">{provider.provider === 'apple' ? '●' : provider.label.slice(0, 1)}</span>
+          {provider.label}
+        </a>)}
+      </div>
+    </div>;
+}
+
+export function SocialAuthCallbackPage() {
+    const { restoreSession } = useAuth();
+    const { notify } = useToast();
+    const location = useLocation();
+    const navigate = useNavigate();
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        if (params.get('status') !== 'success') {
+            notify(params.get('message') || 'Social sign-in could not be completed.', 'error');
+            navigate('/login', { replace: true });
+            return;
+        }
+        restoreSession().then(() => {
+            notify('Welcome. You are signed in.', 'success');
+            navigate(params.get('next') || '/account', { replace: true });
+        }).catch(() => {
+            notify('The sign-in session could not be restored.', 'error');
+            navigate('/login', { replace: true });
+        });
+    }, [location.search, navigate, notify, restoreSession]);
+    return <AuthShell title="Finishing sign in" intro="Securely connecting your account…"><div className="loader" role="status">Signing you in…</div></AuthShell>;
 }
 export function ForgotPasswordPage() {
     const [email, setEmail] = useState('');

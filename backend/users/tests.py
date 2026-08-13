@@ -18,7 +18,8 @@ from django.utils.http import urlsafe_base64_encode
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
-from .models import Profile
+from .models import Profile, SocialIdentity
+from .social_auth import login_or_create_social_user
 from catalog.roles import CATALOG_MANAGERS_GROUP
 from orders.models import Order
 
@@ -27,6 +28,45 @@ User = get_user_model()
 
 
 class UserApiTests(APITestCase):
+    def test_social_provider_discovery_does_not_expose_credentials(self):
+        response = self.client.get(reverse('user-social-providers'))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            {item['provider'] for item in response.data['results']},
+            {'google', 'apple', 'facebook', 'linkedin'},
+        )
+        self.assertNotIn('client_secret', str(response.data))
+
+    def test_unconfigured_social_provider_is_unavailable(self):
+        response = self.client.get(
+            reverse('user-social-login', kwargs={'provider': 'linkedin'})
+        )
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+
+    def test_social_identity_creates_and_reuses_user_without_password(self):
+        profile = {
+            'sub': 'linkedin-member-42',
+            'email': 'social@example.com',
+            'email_verified': True,
+            'given_name': 'Social',
+            'family_name': 'Customer',
+        }
+        user = login_or_create_social_user('linkedin', profile)
+        again = login_or_create_social_user('linkedin', profile)
+        self.assertEqual(user, again)
+        self.assertFalse(user.has_usable_password())
+        self.assertEqual(user.profile.first_name, 'Social')
+        self.assertEqual(SocialIdentity.objects.count(), 1)
+
+    def test_social_identity_requires_verified_email(self):
+        from .social_auth import SocialAuthError
+        with self.assertRaises(SocialAuthError):
+            login_or_create_social_user('google', {
+                'sub': 'google-42',
+                'email': 'unverified@example.com',
+                'email_verified': False,
+            })
+
     def test_profile_is_created_with_nullable_fields_and_registered_in_admin(self):
         user = User.objects.create_user(username='profile-user', password='safe-password')
         profile = user.profile

@@ -6,11 +6,12 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.db.models import Count, DecimalField, Q, Sum, Value
 from django.db.models.functions import Coalesce
+from django.http import HttpResponseRedirect
 from django.middleware.csrf import get_token
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
+from django.views.decorators.csrf import csrf_exempt, csrf_protect, ensure_csrf_cookie
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -30,6 +31,19 @@ from .serializers import (
     allowed_permissions,
 )
 from .services import send_password_reset_emails, send_staff_invitation
+from .social_auth import (
+    PROVIDERS,
+    SocialAuthError,
+    apple_name,
+    callback_url,
+    frontend_result_url,
+    login_or_create_social_user,
+    oauth_client,
+    profile_from_token,
+    provider_is_configured,
+    provider_list,
+    safe_destination,
+)
 
 
 User = get_user_model()
@@ -173,6 +187,77 @@ class LogoutView(APIView):
     def post(self, request):
         logout(request)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class SocialProviderListView(APIView):
+    authentication_classes = ()
+    permission_classes = (permissions.AllowAny,)
+
+    def get(self, request):
+        return Response({'results': provider_list()})
+
+
+class SocialLoginView(APIView):
+    authentication_classes = ()
+    permission_classes = (permissions.AllowAny,)
+
+    def get(self, request, provider):
+        if provider not in PROVIDERS:
+            return Response({'detail': 'Unknown social provider.'}, status=404)
+        if not provider_is_configured(provider):
+            return Response(
+                {'detail': f'{PROVIDERS[provider]["label"]} sign-in is not configured.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        request.session['social_auth_next'] = safe_destination(
+            request.query_params.get('next', '/account')
+        )
+        client = oauth_client(provider)
+        extra = {'response_mode': 'form_post'} if provider == 'apple' else {}
+        return client.authorize_redirect(
+            request,
+            callback_url(provider),
+            **extra,
+        )
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SocialCallbackView(APIView):
+    authentication_classes = ()
+    permission_classes = (permissions.AllowAny,)
+
+    def get(self, request, provider):
+        return self._complete(request, provider)
+
+    def post(self, request, provider):
+        return self._complete(request, provider)
+
+    def _complete(self, request, provider):
+        if provider not in PROVIDERS or not provider_is_configured(provider):
+            return HttpResponseRedirect(frontend_result_url(False))
+        if request.query_params.get('error') or request.data.get('error'):
+            return HttpResponseRedirect(frontend_result_url(
+                False, message='Sign-in was cancelled or denied.'
+            ))
+        try:
+            client = oauth_client(provider)
+            token = client.authorize_access_token(request)
+            profile = profile_from_token(provider, client, token)
+            if provider == 'apple':
+                name = apple_name(request)
+                profile.setdefault('given_name', name.get('firstName'))
+                profile.setdefault('family_name', name.get('lastName'))
+            user = login_or_create_social_user(provider, profile)
+            login(
+                request,
+                user,
+                backend='django.contrib.auth.backends.ModelBackend',
+            )
+            destination = request.session.pop('social_auth_next', '/account')
+            return HttpResponseRedirect(frontend_result_url(True, destination))
+        except Exception as exc:
+            message = str(exc) if isinstance(exc, SocialAuthError) else ''
+            return HttpResponseRedirect(frontend_result_url(False, message=message))
 
 
 def staff_customer_queryset():
