@@ -8,6 +8,11 @@ export function ToastProvider({ children }) {
     const value = useMemo(() => ({ notify }), [notify]);
     return (<ToastContext.Provider value={value}>
       {children}
-      <ToastContainer position="top-right" autoClose={4000} newestOnTop/>
+      <ToastContainer
+        className="app-toast-container"
+        position="top-right"
+        autoClose={4000}
+        newestOnTop
+      />
     </ToastContext.Provider>);
 }

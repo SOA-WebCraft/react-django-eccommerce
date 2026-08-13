@@ -33,9 +33,9 @@ export function LoginPage() {
         }
     };
     return <AuthShell title="Welcome back" intro="Sign in to see your bag, checkout, and view your orders.">
-    <form onSubmit={submit} className="auth-form">
-      <Field label="Username" name="username" autoComplete="username" required value={username} onChange={(e) => setUsername(e.target.value)}/>
-      <Field label="Password" name="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)}/>
+    <form onSubmit={submit} className="auth-form" autoComplete="off">
+      <Field label="Username" name="login_username" autoComplete="off" required value={username} onChange={(e) => setUsername(e.target.value)}/>
+      <Field label="Password" name="login_password" type="password" autoComplete="off" required value={password} onChange={(e) => setPassword(e.target.value)}/>
       <Button type="submit" disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</Button>
     </form>
     <p className="auth-help"><Link to="/forgot-password">Forgot your password?</Link></p>
