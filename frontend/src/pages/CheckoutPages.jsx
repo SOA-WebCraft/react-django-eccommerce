@@ -137,7 +137,7 @@ export function CheckoutPage() {
 
 export function ConfirmationPage() {
     const { orderId: checkoutId = '' } = useParams();
-    const { refresh } = useCart();
+    const { clearLocal, refresh } = useCart();
     const [attempt, setAttempt] = useState(null);
     const [order, setOrder] = useState(null);
     const [error, setError] = useState('');
@@ -154,8 +154,9 @@ export function ConfirmationPage() {
                 setError('');
                 setAttempt(status);
                 if (status.status === 'fulfilled' && status.order_id) {
-                    setOrder(await orderApi.detail(status.order_id));
+                    clearLocal();
                     await refresh();
+                    setOrder(await orderApi.detail(status.order_id));
                     return;
                 }
                 if (['refunded', 'refund_failed', 'failed', 'expired'].includes(status.status))
@@ -179,7 +180,7 @@ export function ConfirmationPage() {
             if (timer)
                 window.clearTimeout(timer);
         };
-    }, [checkoutId, refresh]);
+    }, [checkoutId, clearLocal, refresh]);
     if (error)
         return <div className="container page"><Alert>{error}</Alert></div>;
     if (!attempt || !['fulfilled', 'refunded', 'refund_failed', 'failed', 'expired'].includes(attempt.status))

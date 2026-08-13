@@ -35,7 +35,7 @@ export const catalogApi = {
     deleteProduct: (slug) => apiRequest(`/products/${slug}/`, { method: 'DELETE' }),
 };
 export const cartApi = {
-    get: () => apiRequest('/cart/'),
+    get: () => apiRequest('/cart/', { cache: 'no-store' }),
     add: (product, quantity) => apiRequest('/cart/items/', {
         method: 'POST',
         body: JSON.stringify({ product, quantity }),

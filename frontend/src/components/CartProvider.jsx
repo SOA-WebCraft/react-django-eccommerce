@@ -23,6 +23,7 @@ export function CartProvider({ children }) {
     useEffect(() => {
         void refresh();
     }, [refresh]);
+    const clearLocal = useCallback(() => setCart(null), []);
     const value = useMemo(() => ({
         cart,
         loading,
@@ -40,7 +41,7 @@ export function CartProvider({ children }) {
             await cartApi.remove(item);
             await refresh();
         },
-        clearLocal: () => setCart(null),
-    }), [cart, loading, refresh]);
+        clearLocal,
+    }), [cart, clearLocal, loading, refresh]);
     return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
