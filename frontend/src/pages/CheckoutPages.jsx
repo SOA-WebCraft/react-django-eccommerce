@@ -144,11 +144,14 @@ export function ConfirmationPage() {
     useEffect(() => {
         let cancelled = false;
         let timer;
+        let failures = 0;
         const poll = async () => {
             try {
                 const status = await checkoutApi.status(checkoutId);
                 if (cancelled)
                     return;
+                failures = 0;
+                setError('');
                 setAttempt(status);
                 if (status.status === 'fulfilled' && status.order_id) {
                     setOrder(await orderApi.detail(status.order_id));
@@ -160,8 +163,14 @@ export function ConfirmationPage() {
                 timer = window.setTimeout(poll, 1500);
             }
             catch (reason) {
-                if (!cancelled)
+                if (cancelled)
+                    return;
+                failures += 1;
+                if (failures >= 5) {
                     setError(reason instanceof Error ? reason.message : 'Unable to verify payment.');
+                    return;
+                }
+                timer = window.setTimeout(poll, 2500);
             }
         };
         void poll();
