@@ -321,8 +321,8 @@ Existing finalized orders keep their stored currency.
 
 - Stripe requires `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`.
 - Paystack Ghana requires `PAYSTACK_SECRET_KEY`; configure the webhook as
-  `/api/payments/paystack/webhook/`. Its hosted checkout provides cards, mobile
-  money, and supported bank transfers.
+  `/api/payments/paystack/webhook/`. Checkout shows one Paystack choice, and its
+  hosted page provides cards, mobile money, and supported bank transfers.
 - PayPal requires a REST app client ID/secret and webhook ID. Sandbox is the
   default API. Since PayPal Checkout does not charge GHS directly,
   `PAYPAL_GHS_TO_USD_RATE` converts and snapshots the USD provider amount.

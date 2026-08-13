@@ -62,10 +62,10 @@ class StaffPaymentApiTests(TestCase):
         self.client.force_login(self.customer)
         response = self.client.get(reverse('payment-methods'))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data['results']), 4)
+        self.assertEqual(len(response.data['results']), 1)
         self.assertEqual(
             {item['provider'] for item in response.data['results']},
-            {'paystack', 'store_credit'},
+            {'paystack'},
         )
         self.assertNotIn('paystack-test', str(response.data))
 
@@ -85,7 +85,7 @@ class PaystackCheckoutTests(TestCase):
         CartItem.objects.create(cart=cart, product=self.product, quantity=1)
         self.client.force_login(self.user)
         self.payload = {
-            'provider': 'paystack', 'method': 'mobile_money',
+            'provider': 'paystack', 'method': 'card',
             'billing_name': 'Paystack Buyer',
             'billing_email': 'buyer@example.com',
             'address': '1 Main Street', 'city': 'Accra',
@@ -116,7 +116,10 @@ class PaystackCheckoutTests(TestCase):
         self.assertEqual(transaction.provider_reference, 'paystack-reference-1')
         sent = request_json.call_args.kwargs
         self.assertEqual(sent['data']['currency'], 'GHS')
-        self.assertEqual(sent['data']['channels'], ['mobile_money'])
+        self.assertEqual(
+            sent['data']['channels'],
+            ['card', 'mobile_money', 'bank_transfer'],
+        )
         self.assertEqual(sent['data']['amount'], int(transaction.provider_amount * 100))
         self.assertNotIn('sk_test_paystack', str(response.data))
 

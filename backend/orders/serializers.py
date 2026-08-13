@@ -488,17 +488,15 @@ class CheckoutSessionSerializer(serializers.Serializer):
 
 
 class HostedPaymentSerializer(CheckoutSessionSerializer):
-    provider = serializers.ChoiceField(choices=('stripe', 'paystack', 'paypal', 'store_credit'))
+    provider = serializers.ChoiceField(choices=('stripe', 'paystack'))
     method = serializers.ChoiceField(
-        choices=('card', 'paypal', 'mobile_money', 'bank_transfer', 'gift_card'),
+        choices=('card',),
     )
 
     def validate(self, attrs):
         combinations = {
             'stripe': {'card'},
-            'paystack': {'card', 'mobile_money', 'bank_transfer'},
-            'paypal': {'paypal'},
-            'store_credit': {'gift_card'},
+            'paystack': {'card'},
         }
         if attrs['method'] not in combinations[attrs['provider']]:
             raise serializers.ValidationError({

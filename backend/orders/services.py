@@ -370,29 +370,9 @@ def available_payment_methods():
             'enabled': bool(settings.STRIPE_SECRET_KEY),
         },
         {
-            'provider': 'paystack', 'method': 'card', 'label': 'Visa / Mastercard',
-            'description': 'Card payment through Paystack Ghana.',
+            'provider': 'paystack', 'method': 'card', 'label': 'Paystack',
+            'description': 'Pay securely with card, Mobile Money, or bank transfer.',
             'enabled': bool(settings.PAYSTACK_SECRET_KEY),
-        },
-        {
-            'provider': 'paystack', 'method': 'mobile_money', 'label': 'Mobile Money',
-            'description': 'Ghana mobile-money authorization through Paystack.',
-            'enabled': bool(settings.PAYSTACK_SECRET_KEY),
-        },
-        {
-            'provider': 'paystack', 'method': 'bank_transfer', 'label': 'Bank Transfer',
-            'description': 'Provider-verified bank transfer through Paystack.',
-            'enabled': bool(settings.PAYSTACK_SECRET_KEY),
-        },
-        {
-            'provider': 'paypal', 'method': 'paypal', 'label': 'PayPal',
-            'description': 'PayPal checkout charged in USD.',
-            'enabled': bool(settings.PAYPAL_CLIENT_ID and settings.PAYPAL_CLIENT_SECRET),
-        },
-        {
-            'provider': 'store_credit', 'method': 'gift_card', 'label': 'Gift card',
-            'description': 'Pay the full total with an ECCO gift card.',
-            'enabled': True,
         },
     ]
 
@@ -521,7 +501,7 @@ def create_hosted_payment(user, validated_data):
                     'currency': 'GHS',
                     'reference': str(attempt.pk),
                     'callback_url': settings.PAYMENT_SUCCESS_URL.format(checkout_id=attempt.pk),
-                    'channels': [{'card': 'card', 'mobile_money': 'mobile_money', 'bank_transfer': 'bank_transfer'}[method]],
+                    'channels': ['card', 'mobile_money', 'bank_transfer'],
                     'metadata': {'checkout_id': str(attempt.pk)},
                 },
             )

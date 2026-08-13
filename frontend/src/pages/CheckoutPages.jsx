@@ -35,7 +35,7 @@ export function CheckoutPage() {
     });
     useEffect(() => {
         if (searchParams.get('cancelled') === '1')
-            setError('Stripe Checkout was cancelled. Your cart was not changed.');
+            setError('Payment was cancelled. Your cart was not changed.');
         checkoutApi.quote()
             .then(setQuote)
             .catch((reason) => setError(reason.message))

@@ -1242,10 +1242,13 @@ unauthenticated request returns `401`.
 
 ### POST `/api/checkout/payments/`
 
-Creates a hosted Stripe, Paystack, or PayPal payment using the authenticated
+Creates a hosted Stripe or Paystack payment using the authenticated
 customer's cart. The request contains the existing billing/address and optional
 coupon fields plus `provider` and `method`. Valid pairs are Stripe/card,
-Paystack/card, Paystack/mobile_money, Paystack/bank_transfer, and PayPal/paypal.
+The accepted choices are Stripe/card and Paystack/card. Paystack's hosted page
+then lets the customer use an enabled card, Ghana Mobile Money, or bank transfer
+channel. PayPal and store credit are not separate checkout choices. A gift card
+may still reduce the payable amount before the selected provider is opened.
 
 ```json
 {
