@@ -155,6 +155,11 @@ VITE_API_BASE_URL=/api
 VITE_DEV_PROXY_TARGET=http://127.0.0.1:8000
 ```
 
+The staff analytics dashboard uses Django Channels. Vite proxies `/ws/` to
+Django alongside `/api/`, so local development needs no additional frontend
+variable. Daphne supplies the Channels-aware Django development server after
+the backend requirements are installed.
+
 Keep the default relative value for local development and same-site
 deployments. The application intentionally uses `SameSite=Lax` cookies and
 does not support a cross-site frontend/API deployment.
@@ -461,7 +466,8 @@ and verifies the result. Clear the temporary environment variables afterward.
 Create a Web Service from
 `https://github.com/SOA-WebCraft/react-django-eccommerce` using Docker, the
 repository root, one Free instance, and either Frankfurt or Washington. The
-container applies migrations on startup and launches Gunicorn on Koyeb's `PORT`.
+container applies migrations on startup and launches Daphne on Koyeb's `PORT`
+so HTTP and staff analytics WebSocket traffic share the ASGI service.
 Configure `/api/categories/` as the health-check path.
 
 Set these Koyeb environment variables before deployment:
@@ -491,7 +497,15 @@ STRIPE_SUCCESS_URL=https://<project>.vercel.app/checkout/confirmation/{checkout_
 STRIPE_CANCEL_URL=https://<project>.vercel.app/checkout?cancelled=1
 PAYMENT_SUCCESS_URL=https://<project>.vercel.app/checkout/confirmation/{checkout_id}
 PAYMENT_CANCEL_URL=https://<project>.vercel.app/checkout?cancelled=1
+ANALYTICS_WEBSOCKET_BASE_URL=wss://<backend-service-host>
+ANALYTICS_WEBSOCKET_INTERVAL_SECONDS=5
 ```
+
+`ANALYTICS_WEBSOCKET_BASE_URL` is the public Django service origin using
+`wss://` (for example, the current Render hostname or a Koyeb service hostname).
+The browser obtains a staff-only 60-second socket ticket through the
+same-origin API proxy and then connects directly to Django. The protected REST
+analytics endpoint remains the automatic fallback while the socket reconnects.
 
 Use a Google app password, not the Gmail account password. The free Koyeb
 filesystem is not persistent; all relational data must remain in Neon and all

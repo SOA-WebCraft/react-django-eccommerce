@@ -66,6 +66,10 @@ export const orderApi = {
 };
 export const analyticsApi = {
     get: () => apiRequest('/staff/analytics/', { cache: 'no-store' }),
+    socketTicket: () => apiRequest('/staff/analytics/socket-ticket/', {
+        method: 'POST',
+        body: JSON.stringify({}),
+    }, false),
 };
 export const customerApi = {
     list: (filters = {}) => apiRequest(`/staff/customers/${queryString(filters)}`),

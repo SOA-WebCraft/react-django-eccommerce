@@ -112,6 +112,7 @@ CSRF_TRUSTED_ORIGINS = [
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -155,6 +156,21 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
+ANALYTICS_WEBSOCKET_BASE_URL = os.environ.get(
+    'ANALYTICS_WEBSOCKET_BASE_URL', ''
+).rstrip('/')
+ANALYTICS_WEBSOCKET_INTERVAL = max(
+    2,
+    int(os.environ.get('ANALYTICS_WEBSOCKET_INTERVAL_SECONDS', '5')),
+)
+ANALYTICS_WEBSOCKET_TICKET_MAX_AGE = 60
 
 
 # Database

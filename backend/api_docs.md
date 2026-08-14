@@ -1002,6 +1002,53 @@ Errors:
 - `403 Forbidden`: the authenticated user is not staff.
 - `500 Internal Server Error`: a generic server error without internal details.
 
+### POST `/api/staff/analytics/socket-ticket/`
+
+Creates a short-lived ticket for the staff analytics WebSocket. The ticket is
+bound to the authenticated staff user, expires after 60 seconds, grants only
+read access to analytics snapshots, and must not be stored.
+
+- Authentication: required (session authentication and CSRF protection).
+- Permission: active Django staff users only.
+- Path/query parameters: none.
+- Request body: `{}`.
+
+Success — `200 OK`:
+
+```json
+{
+  "ticket": "signed-short-lived-value",
+  "websocket_url": "wss://api.example.com/ws/staff/analytics/",
+  "expires_in": 60
+}
+```
+
+Errors:
+
+- `401 Unauthorized`: no authenticated session.
+- `403 Forbidden`: the authenticated user is not staff or CSRF validation failed.
+
+### WebSocket `/ws/staff/analytics/?ticket={ticket}`
+
+Streams a fresh analytics snapshot at the configured interval. Obtain the
+ticket immediately beforehand from the socket-ticket endpoint. The connection
+is rejected with close code `4403` for a missing, invalid, expired, inactive,
+or non-staff identity.
+
+```json
+{
+  "type": "analytics.snapshot",
+  "data": {
+    "summary": {},
+    "orders_by_status": [],
+    "daily_sales": [],
+    "top_products": [],
+    "low_stock_products": []
+  },
+  "sent_at": "2026-08-14T12:00:00+00:00"
+}
+```
+
 ### GET `/api/orders/`
 
 Returns the current customer's paginated order history, or all finalized orders

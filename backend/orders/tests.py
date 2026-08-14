@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from django.contrib import admin
 from django.contrib.auth import get_user_model
+from django.core import signing
 from django.core import mail
 from django.test import override_settings
 from django.urls import reverse
@@ -18,6 +19,7 @@ from invoices.models import Invoice
 from .models import CheckoutAttempt, Coupon, Order, OrderItem, PaymentTransaction
 from .emails import send_order_confirmation
 from .services import fulfill_checkout
+from .consumers import ANALYTICS_TICKET_SALT
 
 
 User = get_user_model()
@@ -733,6 +735,33 @@ class StaffAnalyticsApiTests(APITestCase):
         self.assertEqual(
             self.client.get(reverse('staff-analytics')).status_code,
             status.HTTP_401_UNAUTHORIZED,
+        )
+
+    def test_staff_can_request_short_lived_analytics_socket_ticket(self):
+        self.client.force_authenticate(self.staff)
+        response = self.client.post(
+            reverse('staff-analytics-socket-ticket'),
+            {},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        payload = signing.loads(
+            response.data['ticket'],
+            salt=ANALYTICS_TICKET_SALT,
+            max_age=response.data['expires_in'],
+        )
+        self.assertEqual(payload, {'user_id': self.staff.pk})
+        self.assertEqual(
+            response.data['websocket_url'],
+            '/ws/staff/analytics/',
+        )
+
+        self.client.force_authenticate(self.customer)
+        self.assertEqual(
+            self.client.post(
+                reverse('staff-analytics-socket-ticket'), {}, format='json',
+            ).status_code,
+            status.HTTP_403_FORBIDDEN,
         )
 
 

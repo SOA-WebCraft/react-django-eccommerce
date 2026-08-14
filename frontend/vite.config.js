@@ -13,6 +13,11 @@ export default defineConfig(({ mode }) => {
       target: proxyTarget,
       changeOrigin: true,
     },
+    '/ws': {
+      target: proxyTarget,
+      changeOrigin: true,
+      ws: true,
+    },
   }
 
   return {
