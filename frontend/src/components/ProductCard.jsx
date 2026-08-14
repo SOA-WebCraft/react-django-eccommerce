@@ -4,10 +4,10 @@ import { FiHeart, FiShoppingCart } from 'react-icons/fi';
 import { ApiError } from '../api/client';
 import { Button } from './ui';
 import { ProductRating } from './ProductRating';
+import { ProductPrice } from './ProductPrice';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import { useWishlist } from '../hooks/useWishlist';
-import { formatPrice } from '../utils/format';
 import { productPath } from '../utils/productPath';
 export function ProductCard({ product, onAddToCart, adding = false, inCart = false }) {
     const detailPath = productPath(product);
@@ -48,7 +48,7 @@ export function ProductCard({ product, onAddToCart, adding = false, inCart = fal
         <h3><Link to={detailPath}>{product.name}</Link></h3>
         <ProductRating value={product.rating_average} count={product.review_count} compact/>
         <div className="product-card__footer">
-          <strong>{formatPrice(product.price)}</strong>
+          <ProductPrice product={product}/>
           {onAddToCart ? (<Button
             className="product-card__cart-button"
             onClick={() => onAddToCart(product)}

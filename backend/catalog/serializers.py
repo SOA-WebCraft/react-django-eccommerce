@@ -2,6 +2,11 @@ from PIL import Image
 from rest_framework import serializers
 
 from orders.models import OrderItem
+from orders.promotion_pricing import (
+    active_promotion_lookup,
+    best_promotion_for_product,
+    promotional_price,
+)
 
 from .models import Category, Product, ProductImage, ProductReview
 
@@ -87,6 +92,9 @@ class ProductSerializer(serializers.ModelSerializer):
         default=0,
     )
     review_count = serializers.IntegerField(read_only=True, default=0)
+    promotional_price = serializers.SerializerMethodField()
+    promotion_percentage = serializers.SerializerMethodField()
+    promotion_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -98,6 +106,9 @@ class ProductSerializer(serializers.ModelSerializer):
             'image',
             'gallery_images',
             'price',
+            'promotional_price',
+            'promotion_percentage',
+            'promotion_name',
             'stock_quantity',
             'minimum_stock_quantity',
             'is_active',
@@ -109,6 +120,25 @@ class ProductSerializer(serializers.ModelSerializer):
             'updated_at',
         )
         read_only_fields = ('id', 'created_at', 'updated_at')
+
+    def _promotion(self, product):
+        lookup = self.context.get('_active_promotion_lookup')
+        if lookup is None:
+            lookup = active_promotion_lookup()
+            self.context['_active_promotion_lookup'] = lookup
+        return best_promotion_for_product(product, lookup)
+
+    def get_promotional_price(self, product):
+        price = promotional_price(product, self._promotion(product))
+        return f'{price:.2f}' if price is not None else None
+
+    def get_promotion_percentage(self, product):
+        promotion = self._promotion(product)
+        return f'{promotion.percentage:.2f}' if promotion else None
+
+    def get_promotion_name(self, product):
+        promotion = self._promotion(product)
+        return promotion.name if promotion else None
 
 
 class ProductReviewSerializer(serializers.ModelSerializer):

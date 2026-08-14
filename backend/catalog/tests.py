@@ -2,6 +2,7 @@ import io
 import os
 import shutil
 import uuid
+from datetime import timedelta
 from decimal import Decimal
 
 from PIL import Image
@@ -13,10 +14,12 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import transaction
 from django.test import override_settings
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from .models import Category, Product, ProductImage
+from orders.models import Promotion
 from .roles import CATALOG_MANAGERS_GROUP
 
 
@@ -53,6 +56,66 @@ class CatalogApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 1)
         self.assertEqual(response.data['results'][0]['id'], self.active.id)
+
+    def test_product_response_includes_active_promotional_price(self):
+        now = timezone.now()
+        Promotion.objects.create(
+            name='Store sale',
+            percentage=Decimal('20.00'),
+            scope=Promotion.Scope.STORE,
+            starts_at=now - timedelta(hours=1),
+            ends_at=now + timedelta(hours=1),
+        )
+
+        response = self.client.get(
+            reverse('product-detail', args=(self.active.slug,))
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['price'], '25.00')
+        self.assertEqual(response.data['promotional_price'], '20.00')
+        self.assertEqual(response.data['promotion_percentage'], '20.00')
+        self.assertEqual(response.data['promotion_name'], 'Store sale')
+
+    def test_best_matching_promotion_is_displayed(self):
+        now = timezone.now()
+        store = Promotion.objects.create(
+            name='Store sale', percentage=Decimal('10.00'),
+            scope=Promotion.Scope.STORE,
+            starts_at=now - timedelta(hours=1),
+            ends_at=now + timedelta(hours=1),
+        )
+        product_sale = Promotion.objects.create(
+            name='Book sale', percentage=Decimal('25.00'),
+            scope=Promotion.Scope.PRODUCTS,
+            starts_at=now - timedelta(hours=1),
+            ends_at=now + timedelta(hours=1),
+        )
+        product_sale.products.add(self.active)
+
+        response = self.client.get(reverse('product-list'))
+
+        result = response.data['results'][0]
+        self.assertEqual(result['promotional_price'], '18.75')
+        self.assertEqual(result['promotion_name'], product_sale.name)
+        self.assertNotEqual(result['promotion_name'], store.name)
+
+    def test_inactive_or_expired_promotions_are_not_displayed(self):
+        now = timezone.now()
+        Promotion.objects.create(
+            name='Expired sale', percentage=Decimal('50.00'),
+            scope=Promotion.Scope.STORE,
+            starts_at=now - timedelta(days=2),
+            ends_at=now - timedelta(days=1),
+        )
+
+        response = self.client.get(
+            reverse('product-detail', args=(self.active.slug,))
+        )
+
+        self.assertIsNone(response.data['promotional_price'])
+        self.assertIsNone(response.data['promotion_percentage'])
+        self.assertIsNone(response.data['promotion_name'])
 
     def test_public_cannot_mutate_catalog(self):
         response = self.client.post(

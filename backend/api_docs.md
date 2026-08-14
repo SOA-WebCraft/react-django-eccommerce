@@ -633,6 +633,9 @@ Success — `200 OK`:
     "image": null,
     "gallery_images": [],
     "price": "25.00",
+    "promotional_price": "20.00",
+    "promotion_percentage": "20.00",
+    "promotion_name": "Holiday sale",
     "stock_quantity": 5,
     "is_active": true,
     "category": 1,
@@ -644,6 +647,13 @@ Success — `200 OK`:
   }]
 }
 ```
+
+`price` is the product's original catalog price. When an active automatic
+promotion applies, `promotional_price`, `promotion_percentage`, and
+`promotion_name` describe the best eligible promotion; otherwise all three are
+`null`. Promotional pricing is calculated at response time and does not replace
+the stored product price. Checkout revalidates promotions and remains the
+authoritative source for the final total.
 
 Error — `400 Bad Request`:
 

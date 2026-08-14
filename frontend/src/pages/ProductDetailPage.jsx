@@ -5,6 +5,7 @@ import { catalogApi } from '../api/services';
 import { ApiError } from '../api/client';
 import { ProductCard } from '../components/ProductCard';
 import { ProductRating, RatingInput } from '../components/ProductRating';
+import { ProductPrice } from '../components/ProductPrice';
 import { Alert, Button, EmptyState, Loader, QuantityControl } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
 import { useCart } from '../hooks/useCart';
@@ -181,7 +182,7 @@ export function ProductDetailPage() {
         <div className="product-info">
           <p className="eyebrow">{product.category_name}</p><h1>{product.name}</h1>
           <ProductRating value={product.rating_average} count={product.review_count}/>
-          <p className="product-info__price">{formatPrice(product.price)}</p>
+          <ProductPrice product={product} detail/>
           <div className={`stock ${product.stock_quantity ? 'stock--in' : 'stock--out'}`}><span />{product.stock_quantity ? `${product.stock_quantity} in stock` : 'Out of stock'}</div>
           <div className="description">{sections.map((section, index) => {
             const [heading, ...body] = section.split('\n');

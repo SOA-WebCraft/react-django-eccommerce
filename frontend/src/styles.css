@@ -154,3 +154,13 @@
 .analytics-live--connecting>span,.analytics-live--reconnecting>span{background:#f4bf32;box-shadow:0 0 0 5px #f4bf3224;animation:analytics-live-pulse .8s ease-in-out infinite alternate}
 .analytics-live--fallback>span{background:#94a3b8;box-shadow:0 0 0 5px #94a3b824}
 @media(max-width:600px){.chart-canvas--line{height:225px}.chart-canvas--products{height:230px}}
+/* Storefront promotional pricing */
+.product-card__footer{gap:12px}
+.product-price{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 8px}
+.product-price__original{color:var(--muted);font-size:.78rem}
+.product-price__current{color:var(--ink)}
+.product-price__badge{border-radius:999px;background:#fee2e2;color:#9f1239;padding:2px 7px;font-size:.68rem;font-weight:800}
+.product-price--detail{margin:18px 0}
+.product-price--detail .product-price__original{font-size:1.05rem}
+.product-price--detail .product-price__current{font:700 1.7rem "Manrope"}
+.product-price--detail .product-price__badge{font-size:.75rem}

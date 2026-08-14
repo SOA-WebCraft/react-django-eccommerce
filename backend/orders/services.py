@@ -27,9 +27,9 @@ from .models import (
     Order,
     OrderItem,
     PaymentTransaction,
-    Promotion,
     StoreConfiguration,
 )
+from .promotion_pricing import active_promotion_lookup, best_promotion_for_product
 
 
 logger = logging.getLogger(__name__)
@@ -122,25 +122,13 @@ def _valid_gift_card(code, lock=False):
 
 
 def _promotion_discounts(items):
-    now = timezone.now()
-    promotions = Promotion.objects.filter(
-        is_active=True, starts_at__lte=now, ends_at__gt=now,
-    ).prefetch_related('categories', 'products')
+    lookup = active_promotion_lookup()
     snapshots = []
     total = Decimal('0.00')
     for item in items:
-        matching = []
-        for promotion in promotions:
-            eligible = (
-                promotion.scope == Promotion.Scope.STORE
-                or (promotion.scope == Promotion.Scope.CATEGORIES and promotion.categories.filter(pk=item.product.category_id).exists())
-                or (promotion.scope == Promotion.Scope.PRODUCTS and promotion.products.filter(pk=item.product_id).exists())
-            )
-            if eligible:
-                matching.append(promotion)
-        if not matching:
+        best = best_promotion_for_product(item.product, lookup)
+        if best is None:
             continue
-        best = max(matching, key=lambda promotion: promotion.percentage)
         amount = _money(item.product.price * item.quantity * best.percentage / Decimal('100'))
         total += amount
         snapshots.append({
