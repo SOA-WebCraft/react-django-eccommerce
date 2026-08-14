@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { FiShoppingCart } from 'react-icons/fi';
 import { Button } from './ui';
+import { ProductRating } from './ProductRating';
 import { formatPrice } from '../utils/format';
 import { productPath } from '../utils/productPath';
 export function ProductCard({ product, onAddToCart, adding = false, inCart = false }) {
@@ -13,6 +14,7 @@ export function ProductCard({ product, onAddToCart, adding = false, inCart = fal
       <div className="product-card__body">
         <p className="eyebrow">{product.category_name}</p>
         <h3><Link to={detailPath}>{product.name}</Link></h3>
+        <ProductRating value={product.rating_average} count={product.review_count} compact/>
         <div className="product-card__footer">
           <strong>{formatPrice(product.price)}</strong>
           {onAddToCart ? (<Button

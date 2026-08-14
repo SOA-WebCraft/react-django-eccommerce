@@ -136,7 +136,7 @@ function StatisticCard({ icon, label, value, change, note }) {
 }
 
 function FinancialRow({ label, value, negative = false, total = false }) {
-    return <div className={total ? 'is-total' : ''}><dt>{label}</dt><dd className={negative && Number(value) ? 'is-negative' : ''}>{negative && Number(value) ? '−' : ''}{formatPrice(value)}</dd></div>;
+    return <div className={total ? 'is-total' : ''}><dt>{label}</dt><dd className={negative && Number(value) ? 'is-negative' : ''}>{negative && Number(value) ? '-' : ''}{formatPrice(value)}</dd></div>;
 }
 
 function FunnelStep({ label, value, width, muted = false }) {

@@ -637,6 +637,8 @@ Success — `200 OK`:
     "is_active": true,
     "category": 1,
     "category_name": "Books",
+    "rating_average": "4.50",
+    "review_count": 12,
     "created_at": "2026-07-28T20:00:00Z",
     "updated_at": "2026-07-28T20:00:00Z"
   }]
@@ -826,6 +828,83 @@ Errors:
 ```
 
 Relevant status codes: `204`, `401`, `403`, `404`.
+
+### GET `/api/products/{slug}/reviews/`
+
+Returns paginated verified-purchase reviews for an active product, newest first.
+Reading reviews is public. Catalog managers may also read reviews for inactive
+products.
+
+Success — `200 OK`:
+
+```json
+{
+  "count": 1,
+  "next": null,
+  "previous": null,
+  "results": [{
+    "id": 7,
+    "rating": 5,
+    "title": "Excellent phone",
+    "comment": "Fast, polished, and reliable.",
+    "customer": {"id": 12, "name": "Alice Smith"},
+    "verified_purchase": true,
+    "created_at": "2026-08-14T18:30:00Z",
+    "updated_at": "2026-08-14T18:30:00Z"
+  }]
+}
+```
+
+Relevant status codes: `200`, `404`.
+
+### POST `/api/products/{slug}/reviews/`
+
+Creates one review for the authenticated customer. The customer must have a
+paid order item for the product. Ownership is derived from the session; customer
+IDs and verification status cannot be supplied by the client.
+
+```json
+{"rating": 5, "title": "Excellent phone", "comment": "Fast and reliable."}
+```
+
+Success returns `201 Created` with the review shape above. Rating must be an
+integer from 1 through 5. Title and comment are required and limited to 120 and
+2,000 characters respectively.
+
+Errors — `400 Bad Request`:
+
+```json
+{"detail": ["Only customers with a paid purchase may review this product."]}
+```
+
+```json
+{"detail": ["You have already reviewed this product."]}
+```
+
+Relevant status codes: `201`, `400`, `401`, `404`.
+
+### GET `/api/products/{slug}/reviews/{review_id}/`
+
+Returns one public review belonging to the product. Relevant status codes:
+`200`, `404`.
+
+### PATCH `/api/products/{slug}/reviews/{review_id}/`
+
+Updates the authenticated customer's own rating, title, or comment. Omitted
+fields remain unchanged. Staff cannot rewrite a customer's review.
+
+```json
+{"rating": 4, "comment": "Still very good after a month."}
+```
+
+Success returns `200 OK`. Relevant status codes: `200`, `400`, `401`, `403`,
+`404`. `PUT` is disabled and returns `405 Method Not Allowed`.
+
+### DELETE `/api/products/{slug}/reviews/{review_id}/`
+
+Deletes the authenticated customer's own review. Active staff may also delete a
+review for moderation but cannot edit its content. Success returns `204 No
+Content`. Relevant status codes: `204`, `401`, `403`, `404`.
 
 ## Cart
 

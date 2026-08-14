@@ -4,6 +4,7 @@ from .models import (
     Category,
     Product,
     ProductImage,
+    ProductReview,
     PurchaseOrder,
     PurchaseOrderItem,
     StockMovement,
@@ -24,6 +25,16 @@ class ProductImageInline(admin.TabularInline):
     readonly_fields = ('created_at',)
 
 
+class ProductReviewInline(admin.TabularInline):
+    model = ProductReview
+    extra = 0
+    readonly_fields = ('user', 'rating', 'title', 'comment', 'created_at', 'updated_at')
+    can_delete = True
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = (
@@ -37,7 +48,7 @@ class ProductAdmin(admin.ModelAdmin):
     list_filter = ('is_active', 'category')
     prepopulated_fields = {'slug': ('name',)}
     search_fields = ('name',)
-    inlines = (ProductImageInline,)
+    inlines = (ProductImageInline, ProductReviewInline)
 
 
 @admin.register(ProductImage)
@@ -46,6 +57,21 @@ class ProductImageAdmin(admin.ModelAdmin):
     search_fields = ('product__name',)
     list_select_related = ('product',)
     readonly_fields = ('created_at',)
+
+
+@admin.register(ProductReview)
+class ProductReviewAdmin(admin.ModelAdmin):
+    list_display = ('product', 'user', 'rating', 'title', 'created_at')
+    list_filter = ('rating', 'created_at')
+    search_fields = ('product__name', 'user__username', 'title', 'comment')
+    list_select_related = ('product', 'user')
+    readonly_fields = ('product', 'user', 'rating', 'title', 'comment', 'created_at', 'updated_at')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Supplier)

@@ -1,7 +1,9 @@
 from PIL import Image
 from rest_framework import serializers
 
-from .models import Category, Product, ProductImage
+from orders.models import OrderItem
+
+from .models import Category, Product, ProductImage, ProductReview
 
 
 class ValidatedProductImageField(serializers.ImageField):
@@ -78,6 +80,13 @@ class ProductSerializer(serializers.ModelSerializer):
         source='category.name',
         read_only=True,
     )
+    rating_average = serializers.DecimalField(
+        max_digits=3,
+        decimal_places=2,
+        read_only=True,
+        default=0,
+    )
+    review_count = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
         model = Product
@@ -94,7 +103,57 @@ class ProductSerializer(serializers.ModelSerializer):
             'is_active',
             'category',
             'category_name',
+            'rating_average',
+            'review_count',
             'created_at',
             'updated_at',
         )
         read_only_fields = ('id', 'created_at', 'updated_at')
+
+
+class ProductReviewSerializer(serializers.ModelSerializer):
+    customer = serializers.SerializerMethodField()
+    verified_purchase = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProductReview
+        fields = (
+            'id', 'rating', 'title', 'comment', 'customer',
+            'verified_purchase', 'created_at', 'updated_at',
+        )
+        read_only_fields = (
+            'id', 'customer', 'verified_purchase', 'created_at', 'updated_at',
+        )
+
+    def get_customer(self, review):
+        full_name = review.user.get_full_name().strip()
+        return {
+            'id': review.user_id,
+            'name': full_name or review.user.username,
+        }
+
+    def get_verified_purchase(self, review):
+        return True
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        request = self.context['request']
+        product = self.context['product']
+        if self.instance is None:
+            if ProductReview.objects.filter(
+                product=product,
+                user=request.user,
+            ).exists():
+                raise serializers.ValidationError({
+                    'detail': 'You have already reviewed this product.',
+                })
+            purchased = OrderItem.objects.filter(
+                product=product,
+                order__user=request.user,
+                order__payment_status='paid',
+            ).exists()
+            if not purchased:
+                raise serializers.ValidationError({
+                    'detail': 'Only customers with a paid purchase may review this product.',
+                })
+        return attrs

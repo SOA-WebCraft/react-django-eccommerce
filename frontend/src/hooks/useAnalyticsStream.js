@@ -10,6 +10,50 @@ function websocketUrl(value, ticket) {
     return url.toString();
 }
 
+const emptySummary = {
+    total_revenue: '0.00', paid_orders: 0, total_orders: 0, customers: 0,
+};
+const emptyStatistics = {
+    period_days: 30, revenue: '0.00', revenue_change_percent: 0,
+    paid_orders: 0, paid_orders_change_percent: 0,
+    average_order_value: '0.00', units_sold: 0, unique_customers: 0,
+    repeat_customer_rate: '0.0', new_customers: 0,
+};
+const emptyFinancials = {
+    gross_sales: '0.00', discounts: '0.00', shipping: '0.00', tax: '0.00',
+    refunds: '0.00', net_revenue: '0.00',
+};
+const emptyCheckoutPerformance = {
+    started: 0, completed: 0, abandoned_or_failed: 0, completion_rate: '0.0',
+};
+const emptyInventoryHealth = {
+    active_products: 0, low_stock: 0, out_of_stock: 0,
+    units_available: 0, retail_value: '0.00',
+};
+
+function normalizeAnalytics(snapshot = {}) {
+    return {
+        ...snapshot,
+        summary: { ...emptySummary, ...snapshot.summary },
+        statistics: { ...emptyStatistics, ...snapshot.statistics },
+        financials: { ...emptyFinancials, ...snapshot.financials },
+        checkout_performance: {
+            ...emptyCheckoutPerformance,
+            ...snapshot.checkout_performance,
+        },
+        inventory_health: {
+            ...emptyInventoryHealth,
+            ...snapshot.inventory_health,
+        },
+        orders_by_status: snapshot.orders_by_status || [],
+        daily_sales: snapshot.daily_sales || [],
+        top_products: snapshot.top_products || [],
+        sales_by_category: snapshot.sales_by_category || [],
+        sales_by_payment_method: snapshot.sales_by_payment_method || [],
+        low_stock_products: snapshot.low_stock_products || [],
+    };
+}
+
 export function useAnalyticsStream(enabled) {
     const [analytics, setAnalytics] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -21,7 +65,7 @@ export function useAnalyticsStream(enabled) {
     const loadSnapshot = useCallback(async () => {
         try {
             const data = await analyticsApi.get();
-            setAnalytics(data);
+            setAnalytics(normalizeAnalytics(data));
             setLastUpdated(new Date());
             setError('');
         }
@@ -58,16 +102,20 @@ export function useAnalyticsStream(enabled) {
                 ));
                 socketRef.current = socket;
                 socket.addEventListener('open', () => {
+                    if (!active)
+                        return;
                     retryCount = 0;
                     setConnection('live');
                     setError('');
                 });
                 socket.addEventListener('message', (event) => {
+                    if (!active)
+                        return;
                     try {
                         const message = JSON.parse(event.data);
                         if (message.type !== 'analytics.snapshot')
                             return;
-                        setAnalytics(message.data);
+                        setAnalytics(normalizeAnalytics(message.data));
                         setLastUpdated(new Date(message.sent_at));
                         setLoading(false);
                     }
@@ -86,7 +134,10 @@ export function useAnalyticsStream(enabled) {
                         Math.min(30000, 1000 * 2 ** Math.min(retryCount, 5)),
                     );
                 });
-                socket.addEventListener('error', () => socket.close());
+                socket.addEventListener('error', () => {
+                    if (active)
+                        setConnection('reconnecting');
+                });
             }
             catch (reason) {
                 if (!active)
@@ -109,7 +160,11 @@ export function useAnalyticsStream(enabled) {
             active = false;
             window.clearTimeout(retryTimer);
             window.clearInterval(fallbackTimer);
-            socketRef.current?.close();
+            const socket = socketRef.current;
+            if (socket?.readyState === WebSocket.OPEN)
+                socket.close();
+            else if (socket?.readyState === WebSocket.CONNECTING)
+                socket.addEventListener('open', () => socket.close(), { once: true });
             socketRef.current = null;
         };
     }, [enabled, loadSnapshot]);

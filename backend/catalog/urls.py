@@ -5,6 +5,8 @@ from .views import (
     CategoryViewSet,
     ProductImageDeleteView,
     ProductImageListCreateView,
+    ProductReviewDetailView,
+    ProductReviewListCreateView,
     ProductViewSet,
 )
 
@@ -23,6 +25,16 @@ urlpatterns = [
         'products/<int:product_pk>/images/<int:image_pk>/',
         ProductImageDeleteView.as_view(),
         name='product-image-delete',
+    ),
+    path(
+        'products/<slug:product_slug>/reviews/',
+        ProductReviewListCreateView.as_view(),
+        name='product-review-list-create',
+    ),
+    path(
+        'products/<slug:product_slug>/reviews/<int:pk>/',
+        ProductReviewDetailView.as_view(),
+        name='product-review-detail',
     ),
     *router.urls,
 ]

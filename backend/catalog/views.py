@@ -1,20 +1,24 @@
 from decimal import Decimal, InvalidOperation
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
+from django.db.models import Avg, Count, DecimalField, Value
 from django.db.models.deletion import ProtectedError
+from django.db.models.functions import Coalesce
 from rest_framework import filters, generics, mixins, status, viewsets
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.response import Response
 
-from .models import Category, Product, ProductImage
+from .models import Category, Product, ProductImage, ProductReview
 from .permissions import (
     HasCatalogModelPermissionsOrReadOnly,
+    ProductReviewPermission,
     can_manage_catalog,
 )
 from .serializers import (
     CategorySerializer,
     ProductGalleryUploadSerializer,
     ProductImageSerializer,
+    ProductReviewSerializer,
     ProductSerializer,
 )
 
@@ -94,7 +98,14 @@ class ProductViewSet(PatchOnlyModelViewSet):
     def get_queryset(self):
         queryset = Product.objects.select_related(
             'category'
-        ).prefetch_related('gallery_images')
+        ).prefetch_related('gallery_images').annotate(
+            rating_average=Coalesce(
+                Avg('reviews__rating'),
+                Value(Decimal('0.00')),
+                output_field=DecimalField(max_digits=3, decimal_places=2),
+            ),
+            review_count=Count('reviews', distinct=True),
+        )
         if not can_manage_catalog(self.request.user):
             queryset = queryset.filter(is_active=True)
 
@@ -192,3 +203,56 @@ class ProductImageDeleteView(generics.DestroyAPIView):
         return ProductImage.objects.filter(
             product_id=self.kwargs['product_pk']
         )
+
+
+class ProductReviewMixin:
+    permission_classes = (ProductReviewPermission,)
+    serializer_class = ProductReviewSerializer
+
+    def get_product(self):
+        queryset = Product.objects.all()
+        if not can_manage_catalog(self.request.user):
+            queryset = queryset.filter(is_active=True)
+        try:
+            return queryset.get(slug=self.kwargs['product_slug'])
+        except Product.DoesNotExist as exc:
+            raise NotFound('Product not found.') from exc
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['product'] = self.get_product()
+        return context
+
+
+class ProductReviewListCreateView(
+    ProductReviewMixin,
+    generics.ListCreateAPIView,
+):
+    def get_queryset(self):
+        return ProductReview.objects.filter(
+            product=self.get_product(),
+        ).select_related('user')
+
+    def perform_create(self, serializer):
+        try:
+            with transaction.atomic():
+                serializer.save(
+                    product=self.get_product(),
+                    user=self.request.user,
+                )
+        except IntegrityError as exc:
+            raise ValidationError({
+                'detail': 'You have already reviewed this product.',
+            }) from exc
+
+
+class ProductReviewDetailView(
+    ProductReviewMixin,
+    generics.RetrieveUpdateDestroyAPIView,
+):
+    http_method_names = ('get', 'patch', 'delete', 'head', 'options')
+
+    def get_queryset(self):
+        return ProductReview.objects.filter(
+            product=self.get_product(),
+        ).select_related('user')

@@ -34,6 +34,16 @@ export const catalogApi = {
     categories: () => apiRequest('/categories/'),
     products: (filters = {}) => apiRequest(`/products/${queryString(filters)}`),
     product: (slug) => apiRequest(`/products/${slug}/`),
+    reviews: (slug, page = 1) => apiRequest(`/products/${slug}/reviews/${queryString({ page })}`),
+    createReview: (slug, body) => apiRequest(`/products/${slug}/reviews/`, {
+        method: 'POST', body: JSON.stringify(body),
+    }),
+    updateReview: (slug, id, body) => apiRequest(`/products/${slug}/reviews/${id}/`, {
+        method: 'PATCH', body: JSON.stringify(body),
+    }),
+    deleteReview: (slug, id) => apiRequest(`/products/${slug}/reviews/${id}/`, {
+        method: 'DELETE',
+    }),
     createProduct: (body) => apiRequest('/products/', { method: 'POST', body }),
     updateProduct: (slug, body) => apiRequest(`/products/${slug}/`, { method: 'PATCH', body }),
     deleteProduct: (slug) => apiRequest(`/products/${slug}/`, { method: 'DELETE' }),
