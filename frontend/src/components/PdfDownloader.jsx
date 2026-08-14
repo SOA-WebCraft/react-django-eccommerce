@@ -11,6 +11,7 @@ export function PdfDownloader({
     fileName = 'document.pdf',
     title = 'Download PDF',
     description = 'Download your document securely as a PDF file.',
+    compact = false,
 }) {
     const [status, setStatus] = useState('idle');
     const [error, setError] = useState('');
@@ -64,6 +65,15 @@ export function PdfDownloader({
         }
     };
 
+    const downloadButton = <button className={`button button--primary pdf-downloader__button${compact ? ' pdf-downloader__button--compact' : ''}`} type="button" disabled={status === 'loading'} onClick={() => void handleDownload()}>
+      {status === 'loading' && <><Loader2 className="pdf-downloader__spinner" size={19} aria-hidden="true"/>Downloading…</>}
+      {status === 'success' && <><CheckCircle2 size={19} aria-hidden="true"/>Downloaded</>}
+      {(status === 'idle' || status === 'error') && <><Download size={19} aria-hidden="true"/>Download PDF</>}
+    </button>;
+
+    if (compact)
+        return downloadButton;
+
     return <section className="pdf-downloader" aria-labelledby="pdf-download-title">
       <div className="pdf-downloader__heading">
         <span className="pdf-downloader__file-icon" aria-hidden="true"><FileText size={25}/></span>
@@ -74,10 +84,6 @@ export function PdfDownloader({
         <span className="pdf-downloader__extension">.PDF</span>
       </div>
       {error && <div className="pdf-downloader__error" role="alert">{error}</div>}
-      <button className="button button--primary pdf-downloader__button" type="button" disabled={status === 'loading'} onClick={() => void handleDownload()}>
-        {status === 'loading' && <><Loader2 className="pdf-downloader__spinner" size={19} aria-hidden="true"/>Downloading…</>}
-        {status === 'success' && <><CheckCircle2 size={19} aria-hidden="true"/>Downloaded</>}
-        {(status === 'idle' || status === 'error') && <><Download size={19} aria-hidden="true"/>Download PDF</>}
-      </button>
+      {downloadButton}
     </section>;
 }

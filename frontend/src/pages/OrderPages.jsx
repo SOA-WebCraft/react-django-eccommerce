@@ -352,6 +352,7 @@ function ReceiptPdfModal({ order, onClose }) {
             fileName={`${order.invoice.invoice_number}.pdf`}
             title="Download invoice"
             description={`${order.invoice.invoice_number} is ready.`}
+            compact
           />
         </footer>
       </section>

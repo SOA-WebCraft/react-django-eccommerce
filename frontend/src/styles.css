@@ -111,3 +111,7 @@
 @keyframes account-menu-in{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
 @media(max-width:900px){.user-menu .account-menu__trigger{display:inline-flex}.user-menu .account-menu a,.user-menu .account-menu button{display:flex}}
 @media(max-width:420px){.user-menu .account-menu__trigger span{display:none}.user-menu .account-menu__trigger{width:40px;padding:0;justify-content:center}.user-menu .account-menu__trigger svg:last-child{display:none}.account-menu{right:-42px;width:min(230px,calc(100vw - 28px))}}
+
+/* Keep invoice modal actions visually balanced. */
+.receipt-modal__actions>.button,.receipt-modal__actions>.pdf-downloader__button--compact{width:170px;min-height:46px;margin:0}
+@media(max-width:600px){.receipt-modal__actions>.button,.receipt-modal__actions>.pdf-downloader__button--compact{width:100%}}
