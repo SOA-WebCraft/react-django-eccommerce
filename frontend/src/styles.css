@@ -90,5 +90,5 @@
 @media(max-width:850px){.settings-page{width:min(100% - 24px,1320px)}.settings-grid{grid-template-columns:1fr}.settings-card--wide,.settings-save{grid-column:auto}.staff-invite-form,.permission-grid,.settings-status-grid,.unavailable-grid{grid-template-columns:1fr}.role-list{grid-template-columns:1fr}}@media(max-width:600px){.settings-form-grid{grid-template-columns:1fr}.settings-card{padding:18px}}
 .role-list article.is-editing{grid-column:1/-1;flex-wrap:wrap}.role-list__actions{display:flex;gap:10px}.role-list__actions .text-link{color:var(--blue)}.role-inline-editor{width:100%;display:grid;gap:12px;padding-top:13px;border-top:1px solid var(--line)}.role-inline-editor>.button{justify-self:start}
 
-/* Stable authentication validation regions */
-.auth-error-slot{height:58px;overflow:auto}.auth-error-slot .alert{margin:0}.auth-form .field__message{display:block;height:34px;overflow:auto;line-height:1.35}
+/* Compact authentication validation regions */
+.auth-form .field__message{display:block;min-height:34px;line-height:1.35;overflow-wrap:anywhere}

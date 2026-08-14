@@ -34,10 +34,10 @@ export function LoginPage() {
                     setError('password', { type: 'server', message: backendErrors.password });
                 const generalError = backendErrors.detail || backendErrors.non_field_errors;
                 if (generalError)
-                    setError('root.server', { type: 'server', message: generalError });
+                    setError('email', { type: 'server', message: generalError });
                 return;
             }
-            setError('root.server', {
+            setError('email', {
                 type: 'server',
                 message: reason instanceof Error ? reason.message : 'Unable to sign in.',
             });
@@ -46,7 +46,6 @@ export function LoginPage() {
     return <AuthShell title="Welcome back" intro="Sign in to continue to your account and orders.">
     <SocialLoginButtons next={from}/>
     <div className="auth-divider"><span>or sign in with your account</span></div>
-    <div className="auth-error-slot" aria-live="polite">{errors.root?.server && <Alert>{errors.root.server.message}</Alert>}</div>
     <form onSubmit={handleSubmit(submit)} className="auth-form" autoComplete="off" noValidate>
       <Field label="Email address" type="email" inputMode="email" autoComplete="off" placeholder="you@example.com" reserveMessageSpace error={errors.email?.message} {...register('email')}/>
       <div className="auth-password-heading"><span>Password</span><Link to="/forgot-password">Forgot password?</Link></div>
@@ -113,10 +112,10 @@ export function RegisterPage() {
                 }
                 const generalError = backendErrors.detail || backendErrors.non_field_errors;
                 if (generalError)
-                    setError('root.server', { type: 'server', message: generalError });
+                    setError('email', { type: 'server', message: generalError });
                 return;
             }
-            setError('root.server', {
+            setError('email', {
                 type: 'server',
                 message: reason instanceof Error ? reason.message : 'Unable to create your account.',
             });
@@ -125,7 +124,6 @@ export function RegisterPage() {
     return <AuthShell title="Create your account" intro="Join ECCO to save your cart and keep every order in one place.">
     <SocialLoginButtons next="/account"/>
     <div className="auth-divider"><span>or create an account with email</span></div>
-    <div className="auth-error-slot" aria-live="polite">{errors.root?.server && <Alert>{errors.root.server.message}</Alert>}</div>
     <form onSubmit={handleSubmit(submit)} className="auth-form auth-form--register" noValidate>
       <Field label="Username" autoComplete="username" placeholder="Choose a username" reserveMessageSpace error={errors.username?.message} {...register('username')}/>
       <Field label="Email address" type="email" inputMode="email" autoComplete="email" placeholder="you@example.com" reserveMessageSpace hint={emailAvailability === 'checking' ? 'Checking email availability…' : emailAvailability === 'available' ? 'Email is available.' : undefined} error={errors.email?.message} {...register('email')}/>
