@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FiAlertTriangle, FiBarChart2, FiDollarSign, FiShoppingBag, FiUsers } from 'react-icons/fi';
 import { Link, Navigate } from 'react-router-dom';
 import { analyticsApi } from '../api/services';
@@ -63,10 +63,6 @@ export function AnalyticsPage() {
             window.removeEventListener('focus', refreshVisiblePage);
         };
     }, [loadAnalytics, user]);
-    const maxDailyRevenue = useMemo(() => Math.max(
-        0,
-        ...(analytics?.daily_sales || []).map((day) => Number(day.revenue)),
-    ), [analytics]);
     if (!user?.can_manage_orders)
         return <Navigate to="/account" replace/>;
     if (loading)
@@ -97,13 +93,7 @@ export function AnalyticsPage() {
       <div className="analytics-grid">
         <section className="analytics-panel analytics-panel--wide" aria-labelledby="sales-trend-heading">
           <header><div><p className="eyebrow">Last 30 days</p><h2 id="sales-trend-heading">Daily sales trend</h2></div></header>
-          <div className="sales-chart" aria-label="Daily paid revenue chart">
-            {analytics.daily_sales.map((day) => <div className="sales-chart__day" key={day.date} title={`${day.date}: ${formatPrice(day.revenue)} from ${day.orders} paid orders`}>
-              <span className="sales-chart__bar" style={{ height: `${maxDailyRevenue ? Math.max(3, (Number(day.revenue) / maxDailyRevenue) * 100) : 3}%` }}/>
-              <span className="sr-only">{day.date}: {formatPrice(day.revenue)}, {day.orders} orders</span>
-            </div>)}
-          </div>
-          <div className="sales-chart__axis"><span>{analytics.daily_sales[0]?.date}</span><span>{analytics.daily_sales.at(-1)?.date}</span></div>
+          <DailySalesChart sales={analytics.daily_sales}/>
         </section>
         <section className="analytics-panel" aria-labelledby="status-heading">
           <header><div><p className="eyebrow">Fulfillment</p><h2 id="status-heading">Orders by status</h2></div></header>
@@ -129,4 +119,52 @@ export function AnalyticsPage() {
 
 function MetricCard({ icon, label, value, note }) {
     return <article className="metric-card"><span className="metric-card__icon" aria-hidden="true">{icon}</span><div><span>{label}</span><strong>{value}</strong><small>{note}</small></div></article>;
+}
+
+function DailySalesChart({ sales }) {
+    const width = 820;
+    const height = 280;
+    const plot = { left: 78, right: 18, top: 16, bottom: 42 };
+    const plotWidth = width - plot.left - plot.right;
+    const plotHeight = height - plot.top - plot.bottom;
+    const maxRevenue = Math.max(1, ...sales.map((day) => Number(day.revenue)));
+    const points = sales.map((day, index) => ({
+        ...day,
+        x: plot.left + (sales.length > 1 ? index / (sales.length - 1) * plotWidth : plotWidth / 2),
+        y: plot.top + plotHeight - Number(day.revenue) / maxRevenue * plotHeight,
+    }));
+    const linePoints = points.map((point) => `${point.x},${point.y}`).join(' ');
+    const areaPoints = points.length
+        ? `${plot.left},${plot.top + plotHeight} ${linePoints} ${plot.left + plotWidth},${plot.top + plotHeight}`
+        : '';
+    const ticks = [1, .75, .5, .25, 0];
+    const dateIndexes = [...new Set([0, Math.floor((sales.length - 1) / 2), sales.length - 1])].filter((index) => index >= 0 && index < sales.length);
+    const formatDateLabel = (value) => new Date(`${value}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+    return <div className="sales-trend-chart">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-labelledby="daily-sales-chart-title daily-sales-chart-description">
+        <title id="daily-sales-chart-title">Daily paid revenue for the last 30 days</title>
+        <desc id="daily-sales-chart-description">A line chart showing changes in daily paid revenue.</desc>
+        <defs>
+          <linearGradient id="sales-area-gradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#386ce8" stopOpacity=".28"/>
+            <stop offset="100%" stopColor="#386ce8" stopOpacity=".02"/>
+          </linearGradient>
+        </defs>
+        {ticks.map((tick) => {
+            const y = plot.top + (1 - tick) * plotHeight;
+            return <g key={tick} className="sales-trend-chart__grid">
+              <line x1={plot.left} x2={plot.left + plotWidth} y1={y} y2={y}/>
+              <text x={plot.left - 12} y={y + 4}>{formatPrice(maxRevenue * tick)}</text>
+            </g>;
+        })}
+        {areaPoints && <polygon className="sales-trend-chart__area" points={areaPoints}/>}
+        {linePoints && <polyline className="sales-trend-chart__line" points={linePoints}/>}
+        {points.map((point) => <circle className="sales-trend-chart__point" key={point.date} cx={point.x} cy={point.y} r="4" tabIndex="0">
+          <title>{point.date}: {formatPrice(point.revenue)} from {point.orders} paid {point.orders === 1 ? 'order' : 'orders'}</title>
+        </circle>)}
+        {dateIndexes.map((index) => <text className="sales-trend-chart__date" key={sales[index].date} x={points[index].x} y={height - 12} textAnchor={index === 0 ? 'start' : index === sales.length - 1 ? 'end' : 'middle'}>{formatDateLabel(sales[index].date)}</text>)}
+      </svg>
+      <ol className="sr-only">{sales.map((day) => <li key={day.date}>{day.date}: {formatPrice(day.revenue)}, {day.orders} paid orders</li>)}</ol>
+    </div>;
 }
