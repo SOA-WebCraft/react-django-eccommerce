@@ -46,11 +46,11 @@ export function LoginPage() {
     return <AuthShell title="Welcome back" intro="Sign in to continue to your account and orders.">
     <SocialLoginButtons next={from}/>
     <div className="auth-divider"><span>or sign in with your account</span></div>
-    <div className="auth-error-slot" aria-live="polite">{errors.root?.server && <Alert>{errors.root.server.message}</Alert>}</div>
+    {errors.root?.server && <Alert>{errors.root.server.message}</Alert>}
     <form onSubmit={handleSubmit(submit)} className="auth-form" autoComplete="off" noValidate>
-      <Field label="Email address" type="email" inputMode="email" autoComplete="off" placeholder="you@example.com" reserveMessageSpace error={errors.email?.message} {...register('email')}/>
+      <Field label="Email address" type="email" inputMode="email" autoComplete="off" placeholder="you@example.com" error={errors.email?.message} {...register('email')}/>
       <div className="auth-password-heading"><span>Password</span><Link to="/forgot-password">Forgot password?</Link></div>
-      <Field label={<span className="sr-only">Password</span>} type="password" autoComplete="off" placeholder="Enter your password" reserveMessageSpace error={errors.password?.message} {...register('password')}/>
+      <Field label={<span className="sr-only">Password</span>} type="password" autoComplete="off" placeholder="Enter your password" error={errors.password?.message} {...register('password')}/>
       <Button type="submit" className="button--wide" disabled={isSubmitting}>{isSubmitting ? 'Signing in…' : 'Sign in securely'}</Button>
     </form>
     <p className="auth-switch">New to ECCO? <Link to="/register">Create an account</Link></p>
@@ -125,12 +125,12 @@ export function RegisterPage() {
     return <AuthShell title="Create your account" intro="Join ECCO to save your cart and keep every order in one place.">
     <SocialLoginButtons next="/account"/>
     <div className="auth-divider"><span>or create an account with email</span></div>
-    <div className="auth-error-slot" aria-live="polite">{errors.root?.server && <Alert>{errors.root.server.message}</Alert>}</div>
+    {errors.root?.server && <Alert>{errors.root.server.message}</Alert>}
     <form onSubmit={handleSubmit(submit)} className="auth-form auth-form--register" noValidate>
-      <Field label="Username" autoComplete="username" placeholder="Choose a username" reserveMessageSpace error={errors.username?.message} {...register('username')}/>
-      <Field label="Email address" type="email" inputMode="email" autoComplete="email" placeholder="you@example.com" reserveMessageSpace hint={emailAvailability === 'checking' ? 'Checking email availability…' : emailAvailability === 'available' ? 'Email is available.' : undefined} error={errors.email?.message} {...register('email')}/>
-      <Field label="Password" type="password" autoComplete="new-password" placeholder="Create a secure password" reserveMessageSpace hint="Use at least 8 characters and avoid common passwords." error={errors.password?.message} {...register('password')}/>
-      <Field label="Confirm password" type="password" autoComplete="new-password" placeholder="Enter your password again" reserveMessageSpace error={errors.confirm_password?.message} {...register('confirm_password')}/>
+      <Field label="Username" autoComplete="username" placeholder="Choose a username" error={errors.username?.message} {...register('username')}/>
+      <Field label="Email address" type="email" inputMode="email" autoComplete="email" placeholder="you@example.com" hint={emailAvailability === 'checking' ? 'Checking email availability…' : emailAvailability === 'available' ? 'Email is available.' : undefined} error={errors.email?.message} {...register('email')}/>
+      <Field label="Password" type="password" autoComplete="new-password" placeholder="Create a secure password" hint="Use at least 8 characters and avoid common passwords." error={errors.password?.message} {...register('password')}/>
+      <Field label="Confirm password" type="password" autoComplete="new-password" placeholder="Enter your password again" error={errors.confirm_password?.message} {...register('confirm_password')}/>
       <Button type="submit" className="button--wide" disabled={isSubmitting}>{isSubmitting ? 'Creating account…' : 'Create account'}</Button>
     </form>
     <p className="auth-switch">Already have an account? <Link to="/login">Sign in</Link></p>
