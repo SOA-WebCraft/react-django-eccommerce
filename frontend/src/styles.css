@@ -121,8 +121,8 @@
 .receipt-modal__preview iframe{border-radius:0}
 
 /* Match the centered viewer to the portrait proportions of the invoice PDF. */
-.receipt-modal{width:min(735px,calc(100% - 48px),calc((92vh - 170px)*.7071));height:min(92vh,1040px)}
-@media(max-width:600px){.receipt-modal{width:calc(100% - 20px);height:94vh}}
+.receipt-modal{width:min(727px,calc(100% - 56px),calc((92vh - 170px)*.7071 - 8px));height:min(92vh,1040px)}
+@media(max-width:600px){.receipt-modal{width:calc(100% - 28px);height:94vh}}
 
 /* Crop the browser PDF viewer's narrow right-edge gutter. */
 .receipt-modal__preview{overflow:hidden}
