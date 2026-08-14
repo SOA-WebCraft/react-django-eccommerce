@@ -343,7 +343,7 @@ function ReceiptPdfModal({ order, onClose }) {
           <button ref={closeButton} className="receipt-modal__close" type="button" aria-label="Close receipt" onClick={onClose}>×</button>
         </header>
         <div className="receipt-modal__preview">
-          {pdfError ? <Alert>{pdfError}</Alert> : pdfUrl ? <iframe src={`${pdfUrl}#toolbar=0&navpanes=0`} title={`PDF invoice for order ${order.id}`}/> : <Loader label="Loading secure invoice"/>}
+          {pdfError ? <Alert>{pdfError}</Alert> : pdfUrl ? <iframe src={`${pdfUrl}#toolbar=0&navpanes=0&zoom=page-width`} title={`PDF invoice for order ${order.id}`}/> : <Loader label="Loading secure invoice"/>}
         </div>
         <footer className="receipt-modal__actions">
           <button className="button button--secondary" type="button" onClick={onClose}>Close</button>
