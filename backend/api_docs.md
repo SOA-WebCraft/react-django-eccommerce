@@ -961,7 +961,11 @@ counts include every finalized order. The daily series covers the latest 30
 calendar days, including days with no sales. The `statistics` object compares
 that period with the preceding 30 days. A growth percentage is `null` when the
 previous period is zero and the current period has activity. Low stock means an
-active product with five or fewer units.
+active product with five or fewer units. Financial composition, checkout
+completion, category sales, payment mix, and inventory health also cover the
+latest 30 days where applicable. Checkout completion is based on persisted
+checkout attempts and must not be interpreted as a storefront-session
+conversion rate.
 
 - Authentication: required (session authentication).
 - Permission: active Django staff users only.
@@ -989,6 +993,33 @@ Success — `200 OK`:
     "unique_customers": 6,
     "repeat_customer_rate": "33.3",
     "new_customers": 2
+  },
+  "financials": {
+    "gross_sales": "1180.00",
+    "discounts": "30.00",
+    "shipping": "40.00",
+    "tax": "59.50",
+    "refunds": "0.00",
+    "net_revenue": "1249.50"
+  },
+  "checkout_performance": {
+    "started": 12,
+    "completed": 8,
+    "abandoned_or_failed": 4,
+    "completion_rate": "66.7"
+  },
+  "sales_by_category": [
+    {"category": "Smartphones", "revenue": "899.50", "units": 6}
+  ],
+  "sales_by_payment_method": [
+    {"payment_method": "paystack", "orders": 5, "revenue": "799.50"}
+  ],
+  "inventory_health": {
+    "active_products": 50,
+    "low_stock": 4,
+    "out_of_stock": 1,
+    "units_available": 412,
+    "retail_value": "42500.00"
   },
   "orders_by_status": [
     {"status": "pending", "count": 2},
@@ -1055,6 +1086,11 @@ or non-staff identity.
   "data": {
     "summary": {},
     "statistics": {},
+    "financials": {},
+    "checkout_performance": {},
+    "sales_by_category": [],
+    "sales_by_payment_method": [],
+    "inventory_health": {},
     "orders_by_status": [],
     "daily_sales": [],
     "top_products": [],

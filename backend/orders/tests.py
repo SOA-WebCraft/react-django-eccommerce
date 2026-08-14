@@ -685,7 +685,12 @@ class StaffAnalyticsApiTests(APITestCase):
             user=self.customer,
             status=Order.Status.PROCESSING,
             total=Decimal('200.00'),
+            subtotal=Decimal('180.00'),
+            discount=Decimal('10.00'),
+            shipping=Decimal('20.00'),
+            tax=Decimal('10.00'),
             payment_status='paid',
+            payment_method='paystack',
         )
         OrderItem.objects.create(
             order=paid,
@@ -724,6 +729,25 @@ class StaffAnalyticsApiTests(APITestCase):
             response.data['statistics']['repeat_customer_rate'],
             Decimal('0.0'),
         )
+        self.assertEqual(
+            response.data['financials']['gross_sales'], Decimal('180.00'),
+        )
+        self.assertEqual(
+            response.data['financials']['discounts'], Decimal('10.00'),
+        )
+        self.assertEqual(
+            response.data['financials']['net_revenue'], Decimal('200.00'),
+        )
+        self.assertEqual(response.data['checkout_performance']['started'], 0)
+        self.assertEqual(
+            response.data['sales_by_category'][0]['category'], 'Phones',
+        )
+        self.assertEqual(
+            response.data['sales_by_payment_method'][0]['payment_method'],
+            'paystack',
+        )
+        self.assertEqual(response.data['inventory_health']['active_products'], 2)
+        self.assertEqual(response.data['inventory_health']['low_stock'], 1)
         self.assertEqual(
             {row['status']: row['count'] for row in response.data['orders_by_status']},
             {
@@ -770,6 +794,37 @@ class StaffAnalyticsApiTests(APITestCase):
         )
         self.assertEqual(statistics['average_order_value'], Decimal('150.00'))
         self.assertEqual(statistics['repeat_customer_rate'], Decimal('100.0'))
+
+    def test_analytics_reports_checkout_completion(self):
+        checkout_fields = {
+            'user': self.customer,
+            'subtotal': Decimal('50.00'),
+            'total': Decimal('50.00'),
+            'billing_name': 'Customer',
+            'billing_email': 'customer@example.com',
+            'address': '1 Main Street',
+            'city': 'Accra',
+            'postal_code': 'GA1',
+            'country': 'Ghana',
+        }
+        CheckoutAttempt.objects.create(
+            **checkout_fields,
+            status=CheckoutAttempt.Status.FULFILLED,
+        )
+        CheckoutAttempt.objects.create(
+            **checkout_fields,
+            status=CheckoutAttempt.Status.FAILED,
+        )
+
+        self.client.force_authenticate(self.staff)
+        checkout = self.client.get(
+            reverse('staff-analytics')
+        ).data['checkout_performance']
+
+        self.assertEqual(checkout['started'], 2)
+        self.assertEqual(checkout['completed'], 1)
+        self.assertEqual(checkout['abandoned_or_failed'], 1)
+        self.assertEqual(checkout['completion_rate'], Decimal('50.0'))
 
     def test_analytics_excludes_unpaid_revenue_and_requires_staff(self):
         self.client.force_authenticate(self.customer)

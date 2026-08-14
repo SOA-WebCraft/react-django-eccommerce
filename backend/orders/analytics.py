@@ -2,13 +2,22 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
-from django.db.models import Count, Sum
-from django.db.models.functions import TruncDate
+from django.db.models import (
+    CharField,
+    Count,
+    DecimalField,
+    ExpressionWrapper,
+    F,
+    Q,
+    Sum,
+    Value,
+)
+from django.db.models.functions import Coalesce, TruncDate
 from django.utils import timezone
 
 from catalog.models import Product
 
-from .models import Order, OrderItem
+from .models import CheckoutAttempt, Order, OrderItem, PaymentTransaction
 
 
 User = get_user_model()
@@ -64,6 +73,89 @@ def build_analytics_snapshot():
         current_period['revenue'] / current_period['orders']
         if current_period['orders'] else Decimal('0.00')
     ).quantize(Decimal('0.01'))
+    financials = current_paid_orders.aggregate(
+        gross_sales=Sum('subtotal', default=Decimal('0.00')),
+        discounts=Sum('discount', default=Decimal('0.00')),
+        shipping=Sum('shipping', default=Decimal('0.00')),
+        tax=Sum('tax', default=Decimal('0.00')),
+    )
+    refunds = PaymentTransaction.objects.filter(
+        refunded_amount__gt=0,
+        updated_at__date__gte=start_date,
+    ).aggregate(total=Sum('refunded_amount', default=Decimal('0.00')))[
+        'total'
+    ]
+    financials['refunds'] = refunds
+    financials['net_revenue'] = max(
+        current_period['revenue'] - refunds,
+        Decimal('0.00'),
+    )
+    checkout_attempts = CheckoutAttempt.objects.filter(
+        created_at__date__gte=start_date,
+    )
+    checkout_counts = checkout_attempts.aggregate(
+        started=Count('id'),
+        completed=Count(
+            'id',
+            filter=Q(status__in=[
+                CheckoutAttempt.Status.PAID,
+                CheckoutAttempt.Status.FULFILLED,
+                CheckoutAttempt.Status.REFUND_PENDING,
+                CheckoutAttempt.Status.REFUNDED,
+                CheckoutAttempt.Status.REFUND_FAILED,
+            ]),
+        ),
+    )
+    checkout_counts['abandoned_or_failed'] = (
+        checkout_counts['started'] - checkout_counts['completed']
+    )
+    checkout_counts['completion_rate'] = (
+        Decimal(checkout_counts['completed'] * 100)
+        / Decimal(checkout_counts['started'])
+        if checkout_counts['started'] else Decimal('0.0')
+    ).quantize(Decimal('0.1'))
+    sales_by_category = list(
+        OrderItem.objects.filter(
+            order__payment_status='paid',
+            order__created_at__date__gte=start_date,
+        )
+        .annotate(category=Coalesce(
+            'product__category__name',
+            Value('Uncategorized'),
+            output_field=CharField(),
+        ))
+        .values('category')
+        .annotate(
+            revenue=Sum('line_total', default=Decimal('0.00')),
+            units=Sum('quantity', default=0),
+        )
+        .order_by('-revenue', 'category')[:6]
+    )
+    payment_methods = list(
+        current_paid_orders.values('payment_method')
+        .annotate(
+            orders=Count('id'),
+            revenue=Sum('total', default=Decimal('0.00')),
+        )
+        .order_by('-orders', 'payment_method')
+    )
+    for method in payment_methods:
+        method['payment_method'] = method['payment_method'] or 'unknown'
+    active_products = Product.objects.filter(is_active=True)
+    inventory_value_expression = ExpressionWrapper(
+        F('price') * F('stock_quantity'),
+        output_field=DecimalField(max_digits=18, decimal_places=2),
+    )
+    inventory_health = active_products.aggregate(
+        active_products=Count('id'),
+        low_stock=Count('id', filter=Q(stock_quantity__lte=5)),
+        out_of_stock=Count('id', filter=Q(stock_quantity=0)),
+        units_available=Sum('stock_quantity', default=0),
+        retail_value=Sum(
+            inventory_value_expression,
+            default=Decimal('0.00'),
+        ),
+    )
     status_counts = dict(
         Order.objects.values_list('status').annotate(count=Count('id'))
     )
@@ -132,6 +224,11 @@ def build_analytics_snapshot():
                 date_joined__date__gte=start_date,
             ).count(),
         },
+        'financials': financials,
+        'checkout_performance': checkout_counts,
+        'sales_by_category': sales_by_category,
+        'sales_by_payment_method': payment_methods,
+        'inventory_health': inventory_health,
         'orders_by_status': [
             {'status': value, 'count': status_counts.get(value, 0)}
             for value, _ in Order.Status.choices

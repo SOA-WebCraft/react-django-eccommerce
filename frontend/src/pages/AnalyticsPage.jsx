@@ -49,6 +49,38 @@ export function AnalyticsPage() {
           <StatisticCard icon={<FiUserPlus/>} label="New customers" value={analytics.statistics.new_customers} note="Registered in this period"/>
         </div>
       </section>
+      <div className="commerce-insights-grid">
+        <section className="commerce-insight-card" aria-labelledby="financial-heading">
+          <header><div><p className="eyebrow">Money movement</p><h2 id="financial-heading">Revenue composition</h2></div></header>
+          <dl className="financial-breakdown">
+            <FinancialRow label="Gross merchandise sales" value={analytics.financials.gross_sales}/>
+            <FinancialRow label="Discounts" value={analytics.financials.discounts} negative/>
+            <FinancialRow label="Shipping collected" value={analytics.financials.shipping}/>
+            <FinancialRow label="Tax collected" value={analytics.financials.tax}/>
+            <FinancialRow label="Refunds" value={analytics.financials.refunds} negative/>
+            <FinancialRow label="Net revenue" value={analytics.financials.net_revenue} total/>
+          </dl>
+        </section>
+        <section className="commerce-insight-card" aria-labelledby="checkout-health-heading">
+          <header><div><p className="eyebrow">Payment funnel</p><h2 id="checkout-health-heading">Checkout health</h2></div><strong className="completion-rate">{analytics.checkout_performance.completion_rate}%</strong></header>
+          <div className="checkout-funnel" aria-label="Checkout completion funnel">
+            <FunnelStep label="Checkouts started" value={analytics.checkout_performance.started} width="100%"/>
+            <FunnelStep label="Paid or fulfilled" value={analytics.checkout_performance.completed} width={`${analytics.checkout_performance.completion_rate}%`}/>
+            <FunnelStep label="Incomplete" value={analytics.checkout_performance.abandoned_or_failed} width={`${100 - Number(analytics.checkout_performance.completion_rate)}%`} muted/>
+          </div>
+          <p className="commerce-insight-note">Completion uses recorded checkout attempts; it is not a website-session conversion rate.</p>
+        </section>
+        <section className="commerce-insight-card" aria-labelledby="inventory-health-heading">
+          <header><div><p className="eyebrow">Stock position</p><h2 id="inventory-health-heading">Inventory health</h2></div></header>
+          <div className="inventory-health-grid">
+            <InsightValue label="Retail stock value" value={formatPrice(analytics.inventory_health.retail_value)}/>
+            <InsightValue label="Units available" value={analytics.inventory_health.units_available}/>
+            <InsightValue label="Active products" value={analytics.inventory_health.active_products}/>
+            <InsightValue label="Low stock" value={analytics.inventory_health.low_stock} warning/>
+            <InsightValue label="Out of stock" value={analytics.inventory_health.out_of_stock} danger/>
+          </div>
+        </section>
+      </div>
       <div className="analytics-grid">
         <section className="analytics-panel analytics-panel--wide" aria-labelledby="sales-trend-heading">
           <header><div><p className="eyebrow">Last 30 days</p><h2 id="sales-trend-heading">Daily sales trend</h2></div></header>
@@ -67,6 +99,14 @@ export function AnalyticsPage() {
         <section className="analytics-panel" aria-labelledby="top-products-heading">
           <header><div><p className="eyebrow">Paid orders</p><h2 id="top-products-heading">Top-selling products</h2></div></header>
           {analytics.top_products.length ? <TopProductsChart products={analytics.top_products}/> : <EmptyState title="No paid sales yet">Product rankings appear after the first paid order.</EmptyState>}
+        </section>
+        <section className="analytics-panel" aria-labelledby="category-sales-heading">
+          <header><div><p className="eyebrow">Merchandising</p><h2 id="category-sales-heading">Sales by category</h2></div></header>
+          {analytics.sales_by_category.length ? <PerformanceBars rows={analytics.sales_by_category} labelKey="category"/> : <EmptyState title="No category sales yet">Category performance appears after paid orders.</EmptyState>}
+        </section>
+        <section className="analytics-panel analytics-panel--payment" aria-labelledby="payment-mix-heading">
+          <header><div><p className="eyebrow">Tender</p><h2 id="payment-mix-heading">Payment mix</h2></div></header>
+          {analytics.sales_by_payment_method.length ? <div className="payment-mix">{analytics.sales_by_payment_method.map((method) => <div key={method.payment_method}><span>{humanize(method.payment_method)}</span><strong>{method.orders} orders</strong><small>{formatPrice(method.revenue)}</small></div>)}</div> : <EmptyState title="No paid transactions yet">Payment usage appears after paid orders.</EmptyState>}
         </section>
         <section className="analytics-panel analytics-panel--wide" aria-labelledby="low-stock-heading">
           <header><div><p className="eyebrow">Inventory</p><h2 id="low-stock-heading">Low-stock products</h2></div><FiAlertTriangle aria-hidden="true"/></header>
@@ -93,4 +133,26 @@ function StatisticCard({ icon, label, value, change, note }) {
       <strong>{value}</strong>
       <small className={`statistic-card__change statistic-card__change--${changeClass}`}>{change === undefined ? note : comparison}</small>
     </article>;
+}
+
+function FinancialRow({ label, value, negative = false, total = false }) {
+    return <div className={total ? 'is-total' : ''}><dt>{label}</dt><dd className={negative && Number(value) ? 'is-negative' : ''}>{negative && Number(value) ? '−' : ''}{formatPrice(value)}</dd></div>;
+}
+
+function FunnelStep({ label, value, width, muted = false }) {
+    return <div><div><span>{label}</span><strong>{value}</strong></div><span className="checkout-funnel__track"><span className={muted ? 'is-muted' : ''} style={{ width }}/></span></div>;
+}
+
+function InsightValue({ label, value, warning = false, danger = false }) {
+    const tone = danger ? 'danger' : warning ? 'warning' : 'default';
+    return <div className={`insight-value insight-value--${tone}`}><strong>{value}</strong><span>{label}</span></div>;
+}
+
+function PerformanceBars({ rows, labelKey }) {
+    const maximum = Math.max(...rows.map((row) => Number(row.revenue)), 1);
+    return <div className="performance-bars">{rows.map((row) => <div key={row[labelKey]}><div><span>{row[labelKey]}</span><strong>{formatPrice(row.revenue)}</strong></div><span className="performance-bars__track"><span style={{ width: `${Number(row.revenue) / maximum * 100}%` }}/></span><small>{row.units} units sold</small></div>)}</div>;
+}
+
+function humanize(value) {
+    return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
