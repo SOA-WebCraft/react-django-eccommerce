@@ -277,6 +277,24 @@ class UserApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['detail'], 'Invalid email or password.')
+
+    def test_session_login_returns_backend_field_validation_errors(self):
+        missing = self.client.post(reverse('user-login'), {}, format='json')
+        self.assertEqual(missing.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('email', missing.data)
+        self.assertIn('password', missing.data)
+
+        invalid_email = self.client.post(
+            reverse('user-login'),
+            {'email': 'not-an-email', 'password': 'secret'},
+            format='json',
+        )
+        self.assertEqual(
+            invalid_email.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        self.assertIn('email', invalid_email.data)
 
     def test_session_login_rejects_ambiguous_legacy_email(self):
         for username in ('alice', 'alice-legacy'):

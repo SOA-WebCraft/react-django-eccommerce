@@ -36,6 +36,7 @@ class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(
         write_only=True,
+        trim_whitespace=False,
         style={'input_type': 'password'},
     )
 

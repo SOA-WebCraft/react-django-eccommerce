@@ -224,6 +224,15 @@ Error — `401 Unauthorized`:
 {"detail": "Invalid email or password."}
 ```
 
+Malformed or missing fields return `400 Bad Request` using DRF field errors:
+
+```json
+{
+  "email": ["Enter a valid email address."],
+  "password": ["This field is required."]
+}
+```
+
 The response sets a new HttpOnly `sessionid` cookie. Missing or invalid CSRF
 tokens return `403 Forbidden`.
 

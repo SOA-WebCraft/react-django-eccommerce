@@ -8,24 +8,17 @@ import { useToast } from '../hooks/useToast';
 import { FcGoogle } from 'react-icons/fc';
 import { FaApple, FaFacebookF, FaLinkedinIn } from 'react-icons/fa';
 import { FiLock, FiPackage, FiRefreshCw } from 'react-icons/fi';
+import { useForm } from 'react-hook-form';
 export function LoginPage() {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
+    const { register, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm({
+        defaultValues: { email: '', password: '' },
+    });
     const { login } = useAuth();
     const { notify } = useToast();
     const location = useLocation();
     const navigate = useNavigate();
     const from = location.state?.from || '/account';
-    const submit = async (event) => {
-        event.preventDefault();
-        setError('');
-        if (!email.trim() || !password) {
-            setError('Enter your email address and password to continue.');
-            return;
-        }
-        setLoading(true);
+    const submit = async ({ email, password }) => {
         try {
             const authenticatedUser = await login(email.trim().toLowerCase(), password);
             notify('Welcome back.', 'success');
@@ -33,24 +26,32 @@ export function LoginPage() {
             navigate(destination, { replace: true });
         }
         catch (reason) {
-            const message = reason instanceof Error ? reason.message : 'Unable to sign in.';
-            setError(message);
-            if (!(reason instanceof ApiError))
-                notify(message, 'error');
-        }
-        finally {
-            setLoading(false);
+            if (reason instanceof ApiError) {
+                const backendErrors = fieldErrors(reason.data);
+                if (backendErrors.email)
+                    setError('email', { type: 'server', message: backendErrors.email });
+                if (backendErrors.password)
+                    setError('password', { type: 'server', message: backendErrors.password });
+                const generalError = backendErrors.detail || backendErrors.non_field_errors;
+                if (generalError)
+                    setError('root.server', { type: 'server', message: generalError });
+                return;
+            }
+            setError('root.server', {
+                type: 'server',
+                message: reason instanceof Error ? reason.message : 'Unable to sign in.',
+            });
         }
     };
     return <AuthShell title="Welcome back" intro="Sign in to continue to your account and orders.">
     <SocialLoginButtons next={from}/>
     <div className="auth-divider"><span>or sign in with your account</span></div>
-    {error && <Alert>{error}</Alert>}
-    <form onSubmit={submit} className="auth-form" autoComplete="off">
-      <Field label="Email address" name="login_email" type="email" inputMode="email" autoComplete="off" placeholder="you@example.com" required value={email} onChange={(e) => setEmail(e.target.value)}/>
+    {errors.root?.server && <Alert>{errors.root.server.message}</Alert>}
+    <form onSubmit={handleSubmit(submit)} className="auth-form" autoComplete="off" noValidate>
+      <Field label="Email address" type="email" inputMode="email" autoComplete="off" placeholder="you@example.com" error={errors.email?.message} {...register('email')}/>
       <div className="auth-password-heading"><span>Password</span><Link to="/forgot-password">Forgot password?</Link></div>
-      <Field label={<span className="sr-only">Password</span>} name="login_password" type="password" autoComplete="off" placeholder="Enter your password" required value={password} onChange={(e) => setPassword(e.target.value)}/>
-      <Button type="submit" className="button--wide" disabled={loading}>{loading ? 'Signing in…' : 'Sign in securely'}</Button>
+      <Field label={<span className="sr-only">Password</span>} type="password" autoComplete="off" placeholder="Enter your password" error={errors.password?.message} {...register('password')}/>
+      <Button type="submit" className="button--wide" disabled={isSubmitting}>{isSubmitting ? 'Signing in…' : 'Sign in securely'}</Button>
     </form>
     <p className="auth-switch">New to ECCO? <Link to="/register">Create an account</Link></p>
   </AuthShell>;
