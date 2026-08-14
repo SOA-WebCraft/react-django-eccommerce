@@ -1,5 +1,5 @@
 from django.http import FileResponse, Http404
-from rest_framework import generics
+from rest_framework import generics, permissions
 from rest_framework.exceptions import APIException
 from rest_framework.views import APIView
 
@@ -15,12 +15,15 @@ class InvoiceGenerationUnavailable(APIException):
 
 class InvoiceDetailView(generics.RetrieveAPIView):
     serializer_class = InvoiceSerializer
+    permission_classes = (permissions.IsAuthenticated,)
 
     def get_queryset(self):
         return Invoice.objects.filter(customer=self.request.user)
 
 
 class InvoiceDownloadView(APIView):
+    permission_classes = (permissions.IsAuthenticated,)
+
     def get(self, request, pk):
         try:
             invoice = Invoice.objects.get(pk=pk, customer=request.user)

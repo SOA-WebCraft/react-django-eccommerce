@@ -194,6 +194,7 @@ def _complete_paid_checkout(
 
 class OrderListView(generics.ListAPIView):
     serializer_class = OrderSerializer
+    permission_classes = (permissions.IsAuthenticated,)
 
     def get_serializer_class(self):
         if self.request.user.is_staff:
@@ -224,6 +225,7 @@ class OrderListView(generics.ListAPIView):
 
 class OrderDetailView(generics.RetrieveAPIView):
     serializer_class = OrderSerializer
+    permission_classes = (permissions.IsAuthenticated,)
 
     def get_serializer_class(self):
         if self.request.user.is_staff:
@@ -268,6 +270,8 @@ class OrderDetailView(generics.RetrieveAPIView):
 
 
 class CustomerReturnRequestView(APIView):
+    permission_classes = (permissions.IsAuthenticated,)
+
     def post(self, request, pk):
         order = get_object_or_404(Order, pk=pk, user=request.user)
         if order.status != Order.Status.COMPLETED:
@@ -453,6 +457,8 @@ class StaffAnalyticsView(APIView):
 
 
 class PaymentMethodListView(APIView):
+    permission_classes = (permissions.IsAuthenticated,)
+
     def get(self, request):
         return Response({'results': [
             item for item in available_payment_methods() if item['enabled']
@@ -605,6 +611,8 @@ class StaffGiftCardTransactionListView(generics.ListAPIView):
 
 
 class HostedPaymentView(APIView):
+    permission_classes = (permissions.IsAuthenticated,)
+
     def post(self, request):
         serializer = HostedPaymentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -618,6 +626,8 @@ class HostedPaymentView(APIView):
 
 
 class CheckoutQuoteView(APIView):
+    permission_classes = (permissions.IsAuthenticated,)
+
     def post(self, request):
         serializer = QuoteSerializer(
             data=request.data,
@@ -633,6 +643,8 @@ class CheckoutQuoteView(APIView):
 
 
 class CheckoutSessionView(APIView):
+    permission_classes = (permissions.IsAuthenticated,)
+
     def post(self, request):
         serializer = CheckoutSessionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -648,6 +660,7 @@ class CheckoutSessionView(APIView):
 
 class CheckoutStatusView(generics.RetrieveAPIView):
     serializer_class = CheckoutStatusSerializer
+    permission_classes = (permissions.IsAuthenticated,)
 
     def get_queryset(self):
         return (
