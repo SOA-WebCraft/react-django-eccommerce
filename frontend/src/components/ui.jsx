@@ -3,14 +3,15 @@ export function Button({ children, variant = 'primary', className = '', ...props
       {children}
     </button>);
 }
-export function Field({ label, error, hint, ...props }) {
+export function Field({ label, error, hint, reserveMessageSpace = false, ...props }) {
     const id = props.id || props.name;
+    const message = error || hint;
+    const messageId = `${id}-${error ? 'error' : 'hint'}`;
     return (<label className="field" htmlFor={id}>
       <span>{label}</span>
-      <input id={id} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} {...props}/>
-      {hint && <small>{hint}</small>}
-      {error && (<small id={`${id}-error`} className="field__error">
-          {error}
+      <input id={id} aria-invalid={Boolean(error)} aria-describedby={message ? messageId : undefined} {...props}/>
+      {(message || reserveMessageSpace) && (<small id={message ? messageId : undefined} className={`field__message ${error ? 'field__error' : ''}`}>
+          {message || '\u00a0'}
         </small>)}
     </label>);
 }
