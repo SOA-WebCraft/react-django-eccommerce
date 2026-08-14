@@ -121,7 +121,7 @@
 .receipt-modal__preview iframe{border-radius:0}
 
 /* Match the centered viewer to the portrait proportions of the invoice PDF. */
-.receipt-modal{width:min(727px,calc(100% - 56px),calc((92vh - 170px)*.7071 - 8px));height:min(92vh,1040px)}
+.receipt-modal{width:min(720px,calc(100% - 56px));height:min(92vh,1040px)}
 @media(max-width:600px){.receipt-modal{width:calc(100% - 28px);height:94vh}}
 
 /* Crop the browser PDF viewer's narrow right-edge gutter. */
