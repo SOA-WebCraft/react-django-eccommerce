@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { FiShoppingCart } from 'react-icons/fi';
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { FiChevronDown, FiGrid, FiLogOut, FiShoppingCart, FiUser } from 'react-icons/fi';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { catalogApi } from '../api/services';
 import { useAuth } from '../hooks/useAuth';
 import { useCart } from '../hooks/useCart';
@@ -8,13 +8,37 @@ import { useToast } from '../hooks/useToast';
 export function StoreLayout() {
     const [categories, setCategories] = useState([]);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [accountMenuOpen, setAccountMenuOpen] = useState(false);
     const [search, setSearch] = useState('');
+    const accountMenuRef = useRef(null);
     const { user, isAuthenticated, logout } = useAuth();
     const { count, clearLocal } = useCart();
     const { notify } = useToast();
     const navigate = useNavigate();
+    const location = useLocation();
     useEffect(() => {
         catalogApi.categories().then((data) => setCategories(data.results)).catch(() => undefined);
+    }, []);
+    useEffect(() => {
+        setAccountMenuOpen(false);
+    }, [location.pathname]);
+    useEffect(() => {
+        const closeAccountMenu = (event) => {
+            if (accountMenuRef.current && !accountMenuRef.current.contains(event.target)) {
+                setAccountMenuOpen(false);
+            }
+        };
+        const closeAccountMenuWithKeyboard = (event) => {
+            if (event.key === 'Escape') {
+                setAccountMenuOpen(false);
+            }
+        };
+        document.addEventListener('pointerdown', closeAccountMenu);
+        document.addEventListener('keydown', closeAccountMenuWithKeyboard);
+        return () => {
+            document.removeEventListener('pointerdown', closeAccountMenu);
+            document.removeEventListener('keydown', closeAccountMenuWithKeyboard);
+        };
     }, []);
     const submitSearch = (event) => {
         event.preventDefault();
@@ -37,10 +61,45 @@ export function StoreLayout() {
             <button type="submit" aria-label="Search">⌕</button>
           </form>
           <nav className="header-actions" aria-label="Customer navigation">
-            {isAuthenticated ? (<div className="user-menu">
-                {(user?.can_manage_orders || user?.can_manage_catalog || user?.can_manage_settings) && <NavLink to={user?.can_manage_orders || user?.can_manage_catalog ? '/staff/dashboard' : '/staff/settings'}>Dashboard</NavLink>}
-                <NavLink to="/account">Hi, {user?.username}</NavLink>
-                <button onClick={() => { void logout().finally(() => { clearLocal(); notify('You have been logged out.', 'success'); navigate('/'); }); }}>Logout</button>
+            {isAuthenticated ? (<div className="user-menu" ref={accountMenuRef}>
+                <button
+                  className="account-menu__trigger"
+                  type="button"
+                  aria-haspopup="menu"
+                  aria-expanded={accountMenuOpen}
+                  aria-controls="account-menu"
+                  onClick={() => setAccountMenuOpen((open) => !open)}
+                >
+                  <FiUser aria-hidden="true" />
+                  <span>Account</span>
+                  <FiChevronDown className={accountMenuOpen ? 'is-open' : ''} aria-hidden="true" />
+                </button>
+                {accountMenuOpen && <div id="account-menu" className="account-menu" role="menu">
+                  <div className="account-menu__identity">
+                    <span>Signed in as</span>
+                    <strong>{user?.username}</strong>
+                  </div>
+                  <NavLink to="/account" role="menuitem">
+                    <FiUser aria-hidden="true" /> Profile
+                  </NavLink>
+                  {(user?.can_manage_orders || user?.can_manage_catalog || user?.can_manage_settings) && <NavLink to={user?.can_manage_orders || user?.can_manage_catalog ? '/staff/dashboard' : '/staff/settings'} role="menuitem">
+                    <FiGrid aria-hidden="true" /> Dashboard
+                  </NavLink>}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                        setAccountMenuOpen(false);
+                        void logout().catch(() => undefined).finally(() => {
+                            clearLocal();
+                            notify('You have been logged out.', 'success');
+                            navigate('/');
+                        });
+                    }}
+                  >
+                    <FiLogOut aria-hidden="true" /> Logout
+                  </button>
+                </div>}
               </div>) : (<NavLink to="/login">Sign in</NavLink>)}
             <NavLink to="/cart" className="cart-link" aria-label={`Cart with ${count} items`}>
               <FiShoppingCart className="cart-link__icon" aria-hidden="true"/>

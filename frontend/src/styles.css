@@ -92,3 +92,22 @@
 
 /* Keep the promotional authentication content anchored during validation. */
 .auth-visual{align-items:flex-start}
+
+/* Account navigation */
+.user-menu{position:relative}
+.user-menu .account-menu__trigger{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 13px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);text-decoration:none;font-weight:700;transition:border-color .2s,box-shadow .2s,background-color .2s}
+.user-menu .account-menu__trigger:hover,.user-menu .account-menu__trigger:focus-visible{border-color:#9db4f5;background:#f8faff;box-shadow:0 0 0 3px rgba(36,87,230,.1)}
+.account-menu__trigger svg:last-child{transition:transform .2s}
+.account-menu__trigger svg:last-child.is-open{transform:rotate(180deg)}
+.account-menu{position:absolute;top:calc(100% + 12px);right:0;z-index:60;width:230px;padding:8px;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 20px 50px rgba(15,23,42,.18);animation:account-menu-in .16s ease-out both}
+.account-menu::before{content:"";position:absolute;right:18px;top:-6px;width:10px;height:10px;border-top:1px solid var(--line);border-left:1px solid var(--line);background:#fff;transform:rotate(45deg)}
+.account-menu__identity{display:flex;flex-direction:column;gap:3px;margin:0 4px 7px;padding:10px 10px 13px;border-bottom:1px solid var(--line)}
+.account-menu__identity span{color:var(--muted);font-size:.72rem;font-weight:500}
+.account-menu__identity strong{overflow:hidden;color:var(--ink);text-overflow:ellipsis;white-space:nowrap}
+.user-menu .account-menu a,.user-menu .account-menu button{display:flex;align-items:center;gap:10px;width:100%;min-height:42px;padding:10px 12px;border:0;border-radius:9px;background:transparent;color:#334155;text-align:left;text-decoration:none;font-weight:600}
+.user-menu .account-menu a:hover,.user-menu .account-menu a:focus-visible,.user-menu .account-menu button:hover,.user-menu .account-menu button:focus-visible{background:var(--soft);color:var(--blue)}
+.user-menu .account-menu button{color:var(--danger)}
+.account-menu a svg,.account-menu button svg{flex:0 0 auto;font-size:1.05rem}
+@keyframes account-menu-in{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:900px){.user-menu .account-menu__trigger{display:inline-flex}.user-menu .account-menu a,.user-menu .account-menu button{display:flex}}
+@media(max-width:420px){.user-menu .account-menu__trigger span{display:none}.user-menu .account-menu__trigger{width:40px;padding:0;justify-content:center}.user-menu .account-menu__trigger svg:last-child{display:none}.account-menu{right:-42px;width:min(230px,calc(100vw - 28px))}}
