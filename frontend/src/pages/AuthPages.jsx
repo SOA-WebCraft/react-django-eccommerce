@@ -5,10 +5,14 @@ import { ApiError, fieldErrors } from '../api/client';
 import { Alert, Button, Field } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
+import { FcGoogle } from 'react-icons/fc';
+import { FaApple, FaFacebookF, FaLinkedinIn } from 'react-icons/fa';
+import { FiLock, FiPackage, FiRefreshCw } from 'react-icons/fi';
 export function LoginPage() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
     const { login } = useAuth();
     const { notify } = useToast();
     const location = useLocation();
@@ -16,15 +20,21 @@ export function LoginPage() {
     const from = location.state?.from || '/account';
     const submit = async (event) => {
         event.preventDefault();
+        setError('');
+        if (!username.trim() || !password) {
+            setError('Enter your username and password to continue.');
+            return;
+        }
         setLoading(true);
         try {
-            const authenticatedUser = await login(username, password);
+            const authenticatedUser = await login(username.trim(), password);
             notify('Welcome back.', 'success');
             const destination = authenticatedUser.can_manage_orders || authenticatedUser.can_manage_catalog ? '/' : from;
             navigate(destination, { replace: true });
         }
         catch (reason) {
             const message = reason instanceof Error ? reason.message : 'Unable to sign in.';
+            setError(message);
             if (!(reason instanceof ApiError))
                 notify(message, 'error');
         }
@@ -32,16 +42,17 @@ export function LoginPage() {
             setLoading(false);
         }
     };
-    return <AuthShell title="Welcome back" intro="Sign in to see your bag, checkout, and view your orders.">
-    <form onSubmit={submit} className="auth-form" autoComplete="off">
-      <Field label="Username" name="login_username" autoComplete="off" required value={username} onChange={(e) => setUsername(e.target.value)}/>
-      <Field label="Password" name="login_password" type="password" autoComplete="off" required value={password} onChange={(e) => setPassword(e.target.value)}/>
-      <Button type="submit" disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</Button>
-    </form>
-    <p className="auth-help"><Link to="/forgot-password">Forgot your password?</Link></p>
-    <p className="auth-switch">New to ECCO? <Link to="/register">Create an account</Link></p>
-    <p className="session-note">Your secure session remains active across page reloads for up to eight hours.</p>
+    return <AuthShell title="Welcome back" intro="Sign in to continue to your account and orders.">
     <SocialLoginButtons next={from}/>
+    <div className="auth-divider"><span>or sign in with your account</span></div>
+    {error && <Alert>{error}</Alert>}
+    <form onSubmit={submit} className="auth-form" autoComplete="off">
+      <Field label="Username" name="login_username" autoComplete="off" placeholder="Enter your username" required value={username} onChange={(e) => setUsername(e.target.value)}/>
+      <div className="auth-password-heading"><span>Password</span><Link to="/forgot-password">Forgot password?</Link></div>
+      <Field label={<span className="sr-only">Password</span>} name="login_password" type="password" autoComplete="off" placeholder="Enter your password" required value={password} onChange={(e) => setPassword(e.target.value)}/>
+      <Button type="submit" className="button--wide" disabled={loading}>{loading ? 'Signing in…' : 'Sign in securely'}</Button>
+    </form>
+    <p className="auth-switch">New to ECCO? <Link to="/register">Create an account</Link></p>
   </AuthShell>;
 }
 export function RegisterPage() {
@@ -100,12 +111,12 @@ function SocialLoginButtons({ next }) {
     const enabled = providers.filter((provider) => provider.enabled);
     if (!enabled.length)
         return null;
+    const icons = { google: <FcGoogle/>, apple: <FaApple/>, facebook: <FaFacebookF/>, linkedin: <FaLinkedinIn/> };
     return <div className="social-login" aria-label="Social sign in">
-      <div className="auth-divider"><span>or continue with</span></div>
       <div className="social-login__grid">
         {enabled.map((provider) => <a className={`social-button social-button--${provider.provider}`} href={authApi.socialLoginUrl(provider.provider, next)} key={provider.provider}>
-          <span aria-hidden="true">{provider.provider === 'apple' ? '●' : provider.label.slice(0, 1)}</span>
-          {provider.label}
+          <span aria-hidden="true">{icons[provider.provider]}</span>
+          Continue with {provider.label}
         </a>)}
       </div>
     </div>;
@@ -208,5 +219,5 @@ export function ResetPasswordPage() {
 }
 
 function AuthShell({ title, intro, children }) {
-    return <div className="auth-page"><div className="auth-panel"><Link className="brand" to="/">ECCO</Link><p className="eyebrow">Your account</p><h1>{title}</h1><p>{intro}</p>{children}</div><div className="auth-visual"><div><p className="eyebrow">Curated for better living</p><h2>One account.<br />Every essential.</h2></div></div></div>;
+    return <main className="auth-page"><section className="auth-panel"><Link className="brand auth-brand" to="/">ECCO<span>.</span></Link><div className="auth-panel__heading"><p className="eyebrow">Your ECCO account</p><h1>{title}</h1><p>{intro}</p></div>{children}<p className="session-note"><FiLock aria-hidden="true"/> Secure, encrypted account access</p></section><aside className="auth-visual" aria-label="ECCO shopping benefits"><div className="auth-visual__glow"/><div className="auth-visual__content"><span className="auth-visual__badge">ECCO MEMBER</span><p className="eyebrow">Everything in one place</p><h2>Shop smarter.<br />Stay connected.</h2><p>Save your cart, follow every delivery, and access member-only offers from any device.</p><ul><li><FiPackage/><span><strong>Track every order</strong><small>Live status from checkout to delivery</small></span></li><li><FiRefreshCw/><span><strong>Faster repeat purchases</strong><small>Your profile and order history, ready</small></span></li><li><FiLock/><span><strong>Protected checkout</strong><small>Secure provider-hosted payments</small></span></li></ul></div></aside></main>;
 }
