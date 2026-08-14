@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { FiChevronDown, FiGrid, FiLogOut, FiShoppingCart, FiUser } from 'react-icons/fi';
+import { FiChevronDown, FiGrid, FiHeart, FiLogOut, FiShoppingCart, FiUser } from 'react-icons/fi';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { catalogApi } from '../api/services';
 import { useAuth } from '../hooks/useAuth';
 import { useCart } from '../hooks/useCart';
 import { useToast } from '../hooks/useToast';
+import { useWishlist } from '../hooks/useWishlist';
 export function StoreLayout() {
     const [categories, setCategories] = useState([]);
     const [menuOpen, setMenuOpen] = useState(false);
@@ -12,7 +13,8 @@ export function StoreLayout() {
     const [search, setSearch] = useState('');
     const accountMenuRef = useRef(null);
     const { user, isAuthenticated, logout } = useAuth();
-    const { count, clearLocal } = useCart();
+    const { count, clearLocal: clearCart } = useCart();
+    const { count: wishlistCount, clearLocal: clearWishlist } = useWishlist();
     const { notify } = useToast();
     const navigate = useNavigate();
     const location = useLocation();
@@ -91,7 +93,8 @@ export function StoreLayout() {
                     onClick={() => {
                         setAccountMenuOpen(false);
                         void logout().catch(() => undefined).finally(() => {
-                            clearLocal();
+                            clearCart();
+                            clearWishlist();
                             notify('You have been logged out.', 'success');
                             navigate('/');
                         });
@@ -101,6 +104,10 @@ export function StoreLayout() {
                   </button>
                 </div>}
               </div>) : (<NavLink to="/login">Sign in</NavLink>)}
+            {isAuthenticated && <NavLink to="/wishlist" className="cart-link wishlist-link" aria-label={`Wishlist with ${wishlistCount} products`}>
+              <FiHeart className="cart-link__icon" aria-hidden="true"/>
+              <span className="cart-link__count" aria-hidden="true">{wishlistCount}</span>
+            </NavLink>}
             <NavLink to="/cart" className="cart-link" aria-label={`Cart with ${count} items`}>
               <FiShoppingCart className="cart-link__icon" aria-hidden="true"/>
               <span className="cart-link__count" aria-hidden="true">{count}</span>
@@ -124,7 +131,7 @@ export function StoreLayout() {
             <p>Technology selected for the way you live, work, and create.</p>
           </div>
           <div><h2>Shop</h2><Link to="/products">All products</Link><Link to="/products?ordering=-created_at">New arrivals</Link></div>
-          <div><h2>Account</h2><Link to="/account">Profile</Link><Link to={user?.can_manage_orders ? '/staff/orders' : '/account/orders'}>{user?.can_manage_orders ? 'Manage orders' : 'Orders'}</Link>{user?.can_manage_orders && <Link to="/staff/analytics">Analytics</Link>}{user?.can_manage_catalog && <Link to="/staff/products">Manage products</Link>}</div>
+          <div><h2>Account</h2><Link to="/account">Profile</Link>{isAuthenticated && <Link to="/wishlist">Wishlist</Link>}<Link to={user?.can_manage_orders ? '/staff/orders' : '/account/orders'}>{user?.can_manage_orders ? 'Manage orders' : 'Orders'}</Link>{user?.can_manage_orders && <Link to="/staff/analytics">Analytics</Link>}{user?.can_manage_catalog && <Link to="/staff/products">Manage products</Link>}</div>
           <div><h2>Need help?</h2><p>Browse the catalog or sign in to manage your orders.</p></div>
         </div>
         <div className="container footer-bottom">© {new Date().getFullYear()} ECCO. Demo storefront.</div>

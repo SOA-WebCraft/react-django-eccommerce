@@ -123,6 +123,7 @@ INSTALLED_APPS = [
     'users',
     'catalog',
     'cart',
+    'wishlist',
     'orders',
     'invoices',
 ]

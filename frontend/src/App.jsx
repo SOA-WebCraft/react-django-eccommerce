@@ -18,6 +18,7 @@ import { PaymentsPage } from './pages/PaymentsPage';
 import { ShippingPage } from './pages/ShippingPage';
 import { DiscountsPage } from './pages/DiscountsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { WishlistPage } from './pages/WishlistPage';
 export default function App() {
     return (<Routes>
       <Route element={<StoreLayout />}>
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="auth/social/callback" element={<SocialAuthCallbackPage />}/>
         <Route element={<ProtectedRoute />}>
           <Route path="cart" element={<CartPage />}/>
+          <Route path="wishlist" element={<WishlistPage />}/>
           <Route path="checkout" element={<CheckoutPage />}/>
           <Route path="checkout/confirmation/:orderId" element={<ConfirmationPage />}/>
           <Route path="account" element={<AccountPage />}/>

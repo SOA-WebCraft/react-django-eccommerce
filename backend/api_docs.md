@@ -906,6 +906,64 @@ Deletes the authenticated customer's own review. Active staff may also delete a
 review for moderation but cannot edit its content. Success returns `204 No
 Content`. Relevant status codes: `204`, `401`, `403`, `404`.
 
+## Wishlist
+
+Wishlist endpoints require session authentication. Ownership always comes from
+the authenticated user; user IDs are never accepted.
+
+### GET `/api/wishlist/`
+
+Returns all products saved by the current user, newest first. Products that
+later become inactive remain visible as unavailable so the user can remove them.
+
+Success — `200 OK`:
+
+```json
+[
+  {
+    "id": 4,
+    "product": 12,
+    "product_detail": {
+      "id": 12,
+      "name": "Google Pixel 9 Pro",
+      "slug": "google-pixel-9-pro",
+      "price": "5999.00",
+      "stock_quantity": 5,
+      "is_active": true,
+      "rating_average": "4.50",
+      "review_count": 8
+    },
+    "created_at": "2026-08-14T19:00:00Z"
+  }
+]
+```
+
+Relevant status codes: `200`, `401`.
+
+### POST `/api/wishlist/`
+
+Saves one active product. Repeating the same request is idempotent: a new item
+returns `201 Created`, while an already-saved item returns `200 OK`. Duplicate
+rows are also prevented by a database constraint.
+
+```json
+{"product": 12}
+```
+
+Errors — `400 Bad Request`:
+
+```json
+{"product": ["Only active products may be added to a wishlist."]}
+```
+
+Relevant status codes: `200`, `201`, `400`, `401`.
+
+### DELETE `/api/wishlist/items/{id}/`
+
+Removes one saved item belonging to the current user. Another user's item is
+returned as `404 Not Found`. No request body is accepted. Success returns `204
+No Content`. Relevant status codes: `204`, `401`, `404`.
+
 ## Cart
 
 Every cart endpoint explicitly requires session authentication and operates only on

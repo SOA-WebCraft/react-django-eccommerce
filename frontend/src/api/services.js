@@ -60,6 +60,13 @@ export const cartApi = {
     }),
     remove: (id) => apiRequest(`/cart/items/${id}/`, { method: 'DELETE' }),
 };
+export const wishlistApi = {
+    list: () => apiRequest('/wishlist/', { cache: 'no-store' }, false),
+    add: (product) => apiRequest('/wishlist/', {
+        method: 'POST', body: JSON.stringify({ product }),
+    }),
+    remove: (id) => apiRequest(`/wishlist/items/${id}/`, { method: 'DELETE' }),
+};
 export const orderApi = {
     list: (page = 1, status) => apiRequest(`/orders/${queryString({ page, status: status || undefined })}`),
     detail: (id) => apiRequest(`/orders/${id}/`),

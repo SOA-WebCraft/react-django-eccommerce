@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FiEdit2, FiShoppingCart, FiTrash2 } from 'react-icons/fi';
+import { FiEdit2, FiHeart, FiShoppingCart, FiTrash2 } from 'react-icons/fi';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { catalogApi } from '../api/services';
 import { ApiError } from '../api/client';
@@ -9,6 +9,7 @@ import { Alert, Button, EmptyState, Loader, QuantityControl } from '../component
 import { useAuth } from '../hooks/useAuth';
 import { useCart } from '../hooks/useCart';
 import { useToast } from '../hooks/useToast';
+import { useWishlist } from '../hooks/useWishlist';
 import { formatPrice } from '../utils/format';
 import { productPath } from '../utils/productPath';
 export function ProductDetailPage() {
@@ -17,6 +18,7 @@ export function ProductDetailPage() {
     const { isAuthenticated, user } = useAuth();
     const { cart, add, adjust } = useCart();
     const { notify } = useToast();
+    const { has: isWishlisted, toggle: toggleWishlistItem } = useWishlist();
     const [product, setProduct] = useState(null);
     const [related, setRelated] = useState([]);
     const [selectedImage, setSelectedImage] = useState('');
@@ -28,6 +30,7 @@ export function ProductDetailPage() {
     const [reviewError, setReviewError] = useState('');
     const [reviewing, setReviewing] = useState(false);
     const [savingReview, setSavingReview] = useState(false);
+    const [savingWishlist, setSavingWishlist] = useState(false);
     const [reviewForm, setReviewForm] = useState({ rating: 5, title: '', comment: '' });
     useEffect(() => {
         setLoading(true);
@@ -150,6 +153,24 @@ export function ProductDetailPage() {
             setSavingReview(false);
         }
     };
+    const toggleWishlist = async () => {
+        if (!isAuthenticated) {
+            navigate('/login', { state: { from: productPath(product) } });
+            return;
+        }
+        setSavingWishlist(true);
+        try {
+            const added = await toggleWishlistItem(product.id);
+            notify(added ? `${product.name} saved to your wishlist.` : `${product.name} removed from your wishlist.`, 'success');
+        }
+        catch (reason) {
+            if (!(reason instanceof ApiError))
+                notify(reason instanceof Error ? reason.message : 'Unable to update your wishlist.', 'error');
+        }
+        finally {
+            setSavingWishlist(false);
+        }
+    };
     return (<div className="container page">
       <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to="/">Home</Link><span>/</span><Link to="/products">Products</Link><span>/</span><span>{product.name}</span></nav>
       <article className="product-detail">
@@ -169,6 +190,7 @@ export function ProductDetailPage() {
           <div className="purchase-panel">
             {cartItem && <QuantityControl value={cartItem.quantity} max={Math.max(1, product.stock_quantity)} onDecrease={() => void changeQuantity('decrement')} onIncrease={() => void changeQuantity('increment')} disabled={!product.stock_quantity || adding}/>}
             {!cartItem && <Button className="add-to-cart-button" onClick={addToCart} disabled={!product.stock_quantity || adding}>{!adding && <FiShoppingCart aria-hidden="true"/>}{adding ? 'Adding…' : 'Add to cart'}</Button>}
+            <Button variant="secondary" className={`wishlist-detail-button${isWishlisted(product.id) ? ' is-saved' : ''}`} onClick={() => void toggleWishlist()} disabled={savingWishlist} aria-pressed={isWishlisted(product.id)}><FiHeart aria-hidden="true"/>{isWishlisted(product.id) ? 'Saved' : 'Save'}</Button>
           </div>
           <p className="purchase-note">Inventory and total are validated securely when your order is placed.</p>
         </div>
