@@ -128,3 +128,6 @@
 /* Crop the browser PDF viewer's narrow right-edge gutter. */
 .receipt-modal__preview{overflow:hidden}
 .receipt-modal__preview iframe{width:calc(100% + 6px);margin-right:-6px}
+
+/* Keep receipt actions on an opaque footer above the PDF preview. */
+.receipt-modal__actions{position:relative;z-index:1;background:#fff}
