@@ -958,8 +958,10 @@ including for staff users.
 Returns staff ecommerce metrics. Revenue, daily sales, and top products include
 only finalized orders whose `payment_status` is `paid`. Status and total-order
 counts include every finalized order. The daily series covers the latest 30
-calendar days, including days with no sales. Low stock means an active product
-with five or fewer units.
+calendar days, including days with no sales. The `statistics` object compares
+that period with the preceding 30 days. A growth percentage is `null` when the
+previous period is zero and the current period has activity. Low stock means an
+active product with five or fewer units.
 
 - Authentication: required (session authentication).
 - Permission: active Django staff users only.
@@ -975,6 +977,18 @@ Success — `200 OK`:
     "paid_orders": 8,
     "total_orders": 10,
     "customers": 6
+  },
+  "statistics": {
+    "period_days": 30,
+    "revenue": "1249.50",
+    "revenue_change_percent": "18.4",
+    "paid_orders": 8,
+    "paid_orders_change_percent": "14.3",
+    "average_order_value": "156.19",
+    "units_sold": 14,
+    "unique_customers": 6,
+    "repeat_customer_rate": "33.3",
+    "new_customers": 2
   },
   "orders_by_status": [
     {"status": "pending", "count": 2},
@@ -1040,6 +1054,7 @@ or non-staff identity.
   "type": "analytics.snapshot",
   "data": {
     "summary": {},
+    "statistics": {},
     "orders_by_status": [],
     "daily_sales": [],
     "top_products": [],

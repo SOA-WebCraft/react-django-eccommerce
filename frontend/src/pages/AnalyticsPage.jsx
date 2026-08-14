@@ -1,4 +1,4 @@
-import { FiAlertTriangle, FiBarChart2, FiDollarSign, FiShoppingBag, FiUsers } from 'react-icons/fi';
+import { FiActivity, FiAlertTriangle, FiBarChart2, FiDollarSign, FiPackage, FiRepeat, FiShoppingBag, FiTrendingUp, FiUserPlus, FiUsers } from 'react-icons/fi';
 import { Link, Navigate } from 'react-router-dom';
 import { OrderStatusChart, SalesTrendChart, TopProductsChart } from '../components/AnalyticsCharts';
 import { Alert, EmptyState, Loader } from '../components/ui';
@@ -37,6 +37,18 @@ export function AnalyticsPage() {
         <MetricCard icon={<FiUsers/>} label="Customers" value={summary.customers} note="Registered customer accounts"/>
         <MetricCard icon={<FiBarChart2/>} label="Average paid order" value={formatPrice(summary.paid_orders ? Number(summary.total_revenue) / summary.paid_orders : 0)} note="Revenue per paid order"/>
       </section>
+      <section className="analytics-statistics" aria-labelledby="statistics-heading">
+        <header><div><p className="eyebrow">Period comparison</p><h2 id="statistics-heading">Last 30 days</h2></div><p>Compared with the preceding 30-day period.</p></header>
+        <div className="analytics-statistics__grid">
+          <StatisticCard icon={<FiTrendingUp/>} label="Revenue" value={formatPrice(analytics.statistics.revenue)} change={analytics.statistics.revenue_change_percent}/>
+          <StatisticCard icon={<FiActivity/>} label="Paid orders" value={analytics.statistics.paid_orders} change={analytics.statistics.paid_orders_change_percent}/>
+          <StatisticCard icon={<FiDollarSign/>} label="Average order value" value={formatPrice(analytics.statistics.average_order_value)} note="Paid orders"/>
+          <StatisticCard icon={<FiPackage/>} label="Units sold" value={analytics.statistics.units_sold} note="Across paid orders"/>
+          <StatisticCard icon={<FiUsers/>} label="Unique buyers" value={analytics.statistics.unique_customers} note="Customers with paid orders"/>
+          <StatisticCard icon={<FiRepeat/>} label="Repeat-buyer rate" value={`${analytics.statistics.repeat_customer_rate}%`} note="Two or more paid orders"/>
+          <StatisticCard icon={<FiUserPlus/>} label="New customers" value={analytics.statistics.new_customers} note="Registered in this period"/>
+        </div>
+      </section>
       <div className="analytics-grid">
         <section className="analytics-panel analytics-panel--wide" aria-labelledby="sales-trend-heading">
           <header><div><p className="eyebrow">Last 30 days</p><h2 id="sales-trend-heading">Daily sales trend</h2></div></header>
@@ -66,4 +78,19 @@ export function AnalyticsPage() {
 
 function MetricCard({ icon, label, value, note }) {
     return <article className="metric-card"><span className="metric-card__icon" aria-hidden="true">{icon}</span><div><span>{label}</span><strong>{value}</strong><small>{note}</small></div></article>;
+}
+
+function StatisticCard({ icon, label, value, change, note }) {
+    const numericChange = change === null ? null : Number(change);
+    const changeClass = numericChange === null || numericChange === 0
+        ? 'neutral'
+        : numericChange > 0 ? 'positive' : 'negative';
+    const comparison = numericChange === null
+        ? 'New in this period'
+        : `${numericChange > 0 ? '+' : ''}${numericChange.toFixed(1)}% vs previous period`;
+    return <article className="statistic-card">
+      <div className="statistic-card__heading"><span>{label}</span><span aria-hidden="true">{icon}</span></div>
+      <strong>{value}</strong>
+      <small className={`statistic-card__change statistic-card__change--${changeClass}`}>{change === undefined ? note : comparison}</small>
+    </article>;
 }

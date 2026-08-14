@@ -138,6 +138,12 @@
 .chart-canvas--line{height:285px}
 .chart-canvas--doughnut{height:170px;margin:0 auto 25px}
 .chart-canvas--products{height:255px}
+.analytics-statistics{margin-bottom:24px;padding:25px 27px;border:1px solid #ffffff1f;border-radius:18px;background:#ffffff0d;backdrop-filter:blur(12px)}
+.analytics-statistics>header{display:flex;align-items:end;justify-content:space-between;gap:18px;margin-bottom:20px}.analytics-statistics>header h2{margin:3px 0 0;color:#fff}.analytics-statistics>header .eyebrow{margin:0}.analytics-statistics>header>p{margin:0;color:#aebce6;font-size:.78rem}
+.analytics-statistics__grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:12px}.statistic-card{min-width:0;padding:17px;border:1px solid #ffffff14;border-radius:14px;background:#fff;color:#111827;box-shadow:0 12px 30px #05071c24}.statistic-card__heading{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#64748b;font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.045em}.statistic-card__heading>span:last-child{display:grid;place-items:center;width:29px;height:29px;flex:0 0 auto;border-radius:9px;background:#edf2ff;color:#315ee2;font-size:.95rem}.statistic-card>strong{display:block;margin:14px 0 8px;overflow:hidden;font:800 clamp(1.05rem,1.5vw,1.35rem) "Manrope";text-overflow:ellipsis}.statistic-card__change{display:block;min-height:2.4em;color:#64748b;font-size:.68rem;line-height:1.25}.statistic-card__change--positive{color:#078563}.statistic-card__change--negative{color:#c43d34}.statistic-card__change--neutral{color:#64748b}
+@media(max-width:1180px){.analytics-statistics__grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:700px){.analytics-statistics{padding:20px}.analytics-statistics>header{align-items:flex-start;flex-direction:column}.analytics-statistics__grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:430px){.analytics-statistics__grid{grid-template-columns:1fr}}
 .analytics-live--connecting>span,.analytics-live--reconnecting>span{background:#f4bf32;box-shadow:0 0 0 5px #f4bf3224;animation:analytics-live-pulse .8s ease-in-out infinite alternate}
 .analytics-live--fallback>span{background:#94a3b8;box-shadow:0 0 0 5px #94a3b824}
 @media(max-width:600px){.chart-canvas--line{height:225px}.chart-canvas--products{height:230px}}

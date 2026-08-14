@@ -1,4 +1,5 @@
 import re
+from datetime import timedelta
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -9,6 +10,7 @@ from django.core import signing
 from django.core import mail
 from django.test import override_settings
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -709,6 +711,19 @@ class StaffAnalyticsApiTests(APITestCase):
         self.assertEqual(response.data['summary']['paid_orders'], 1)
         self.assertEqual(response.data['summary']['total_orders'], 2)
         self.assertEqual(response.data['summary']['customers'], 2)
+        self.assertEqual(response.data['statistics']['period_days'], 30)
+        self.assertEqual(response.data['statistics']['revenue'], Decimal('200.00'))
+        self.assertIsNone(response.data['statistics']['revenue_change_percent'])
+        self.assertEqual(response.data['statistics']['paid_orders'], 1)
+        self.assertEqual(
+            response.data['statistics']['average_order_value'],
+            Decimal('200.00'),
+        )
+        self.assertEqual(response.data['statistics']['units_sold'], 4)
+        self.assertEqual(
+            response.data['statistics']['repeat_customer_rate'],
+            Decimal('0.0'),
+        )
         self.assertEqual(
             {row['status']: row['count'] for row in response.data['orders_by_status']},
             {
@@ -724,6 +739,37 @@ class StaffAnalyticsApiTests(APITestCase):
         self.assertEqual(response.data['top_products'][0]['quantity_sold'], 4)
         self.assertEqual(response.data['top_products'][0]['product_name'], 'Popular Phone')
         self.assertEqual(response.data['low_stock_products'][0]['name'], 'Low Stock Phone')
+
+    def test_analytics_compares_current_and_previous_thirty_days(self):
+        current = Order.objects.create(
+            user=self.customer,
+            status=Order.Status.PROCESSING,
+            total=Decimal('100.00'),
+            payment_status='paid',
+        )
+        previous = Order.objects.create(
+            user=self.other_customer,
+            status=Order.Status.PROCESSING,
+            total=Decimal('100.00'),
+            payment_status='paid',
+        )
+        Order.objects.filter(pk=previous.pk).update(
+            created_at=timezone.now() - timedelta(days=35),
+        )
+
+        self.client.force_authenticate(self.staff)
+        statistics = self.client.get(
+            reverse('staff-analytics')
+        ).data['statistics']
+
+        self.assertEqual(statistics['revenue'], Decimal('300.00'))
+        self.assertEqual(statistics['revenue_change_percent'], Decimal('200.0'))
+        self.assertEqual(statistics['paid_orders'], 2)
+        self.assertEqual(
+            statistics['paid_orders_change_percent'], Decimal('100.0'),
+        )
+        self.assertEqual(statistics['average_order_value'], Decimal('150.00'))
+        self.assertEqual(statistics['repeat_customer_rate'], Decimal('100.0'))
 
     def test_analytics_excludes_unpaid_revenue_and_requires_staff(self):
         self.client.force_authenticate(self.customer)
