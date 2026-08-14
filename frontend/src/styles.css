@@ -119,3 +119,8 @@
 /* Let the page-width PDF preview meet the modal edges without side gutters. */
 .receipt-modal__preview{padding-inline:0}
 .receipt-modal__preview iframe{border-radius:0}
+
+/* Use the full viewport for invoices so no dark modal backdrop remains at the sides. */
+.receipt-modal-backdrop{padding:0;background:#fff;backdrop-filter:none}
+.receipt-modal{width:100%;height:100vh;max-height:none;border-radius:0;box-shadow:none}
+@media(max-width:600px){.receipt-modal{height:100vh;border-radius:0}}
