@@ -18,6 +18,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from .serializers import (
+    EmailAvailabilitySerializer,
     LoginSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
@@ -131,6 +132,19 @@ class StaffSettingsPermissionListView(APIView):
 class RegistrationView(generics.CreateAPIView):
     serializer_class = RegistrationSerializer
     permission_classes = (permissions.AllowAny,)
+
+
+@method_decorator(csrf_protect, name='dispatch')
+class EmailAvailabilityView(APIView):
+    authentication_classes = ()
+    permission_classes = (permissions.AllowAny,)
+    throttle_classes = (ScopedRateThrottle,)
+    throttle_scope = 'email_availability'
+
+    def post(self, request):
+        serializer = EmailAvailabilitySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response({'available': True})
 
 
 class CurrentUserView(generics.RetrieveAPIView):

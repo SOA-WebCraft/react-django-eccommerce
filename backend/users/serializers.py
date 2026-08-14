@@ -41,6 +41,18 @@ class LoginSerializer(serializers.Serializer):
     )
 
 
+class EmailAvailabilitySerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        normalized = value.strip().lower()
+        if User.objects.filter(email__iexact=normalized).exists():
+            raise serializers.ValidationError(
+                'An account with this email address already exists.'
+            )
+        return normalized
+
+
 class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
@@ -341,12 +353,18 @@ class ProfileUpdateSerializer(serializers.Serializer):
 class RegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         write_only=True,
+        trim_whitespace=False,
+        style={'input_type': 'password'},
+    )
+    confirm_password = serializers.CharField(
+        write_only=True,
+        trim_whitespace=False,
         style={'input_type': 'password'},
     )
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'password')
+        fields = ('id', 'username', 'email', 'password', 'confirm_password')
         read_only_fields = ('id',)
         extra_kwargs = {'email': {'required': True, 'allow_blank': False}}
 
@@ -358,9 +376,23 @@ class RegistrationSerializer(serializers.ModelSerializer):
             )
         return normalized
 
+    def validate_username(self, value):
+        normalized = value.strip()
+        if len(normalized) < 3:
+            raise serializers.ValidationError('Use at least 3 characters.')
+        return normalized
+
     def validate_password(self, value):
         validate_password(value)
         return value
 
+    def validate(self, attrs):
+        if attrs['password'] != attrs['confirm_password']:
+            raise serializers.ValidationError({
+                'confirm_password': 'Passwords do not match.'
+            })
+        return attrs
+
     def create(self, validated_data):
+        validated_data.pop('confirm_password')
         return User.objects.create_user(**validated_data)

@@ -123,6 +123,7 @@ class UserApiTests(APITestCase):
                 'username': 'alice',
                 'email': 'alice@example.com',
                 'password': 'A-long-safe-password-482!',
+                'confirm_password': 'A-long-safe-password-482!',
             },
             format='json',
         )
@@ -135,7 +136,12 @@ class UserApiTests(APITestCase):
     def test_register_rejects_weak_password(self):
         response = self.client.post(
             reverse('user-register'),
-            {'username': 'alice', 'email': 'alice@example.com', 'password': '123'},
+            {
+                'username': 'alice',
+                'email': 'alice@example.com',
+                'password': '123',
+                'confirm_password': '123',
+            },
             format='json',
         )
 
@@ -154,11 +160,62 @@ class UserApiTests(APITestCase):
                 'username': 'alice',
                 'email': 'ALICE@example.com',
                 'password': 'A-long-safe-password-482!',
+                'confirm_password': 'A-long-safe-password-482!',
             },
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('email', response.data)
+
+    def test_register_validates_every_field_and_password_confirmation(self):
+        missing = self.client.post(reverse('user-register'), {}, format='json')
+        self.assertEqual(missing.status_code, status.HTTP_400_BAD_REQUEST)
+        for field in ('username', 'email', 'password', 'confirm_password'):
+            self.assertIn(field, missing.data)
+
+        mismatch = self.client.post(
+            reverse('user-register'),
+            {
+                'username': 'alice',
+                'email': 'alice@example.com',
+                'password': 'A-long-safe-password-482!',
+                'confirm_password': 'A-different-safe-password-731!',
+            },
+            format='json',
+        )
+        self.assertEqual(mismatch.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('confirm_password', mismatch.data)
+        self.assertFalse(User.objects.filter(username='alice').exists())
+
+    def test_email_availability_is_validated_case_insensitively(self):
+        User.objects.create_user(
+            username='existing',
+            email='existing@example.com',
+            password='A-long-safe-password-482!',
+        )
+        existing = self.client.post(
+            reverse('user-email-availability'),
+            {'email': 'EXISTING@example.com'},
+            format='json',
+        )
+        self.assertEqual(existing.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('email', existing.data)
+
+        available = self.client.post(
+            reverse('user-email-availability'),
+            {'email': 'available@example.com'},
+            format='json',
+        )
+        self.assertEqual(available.status_code, status.HTTP_200_OK)
+        self.assertEqual(available.data, {'available': True})
+
+        invalid = self.client.post(
+            reverse('user-email-availability'),
+            {'email': 'not-an-email'},
+            format='json',
+        )
+        self.assertEqual(invalid.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('email', invalid.data)
 
     def test_session_login_and_current_user(self):
         User.objects.create_user(
@@ -448,13 +505,23 @@ class UserApiTests(APITestCase):
                 'username': 'bob',
                 'email': 'bob@example.com',
                 'password': 'A-long-safe-password-482!',
+                'confirm_password': 'A-long-safe-password-482!',
             },
+            format='json',
+        )
+        availability = csrf_client.post(
+            reverse('user-email-availability'),
+            {'email': 'available@example.com'},
             format='json',
         )
 
         self.assertEqual(login.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(
             registration.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+        self.assertEqual(
+            availability.status_code,
             status.HTTP_403_FORBIDDEN,
         )
 

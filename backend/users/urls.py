@@ -3,6 +3,7 @@ from django.urls import path
 from .views import (
     CsrfView,
     CurrentUserView,
+    EmailAvailabilityView,
     LoginView,
     LogoutView,
     PasswordResetConfirmView,
@@ -16,6 +17,7 @@ from .views import (
 
 urlpatterns = [
     path('register/', RegistrationView.as_view(), name='user-register'),
+    path('email-availability/', EmailAvailabilityView.as_view(), name='user-email-availability'),
     path('csrf/', CsrfView.as_view(), name='user-csrf'),
     path('login/', LoginView.as_view(), name='user-login'),
     path('logout/', LogoutView.as_view(), name='user-logout'),

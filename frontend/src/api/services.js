@@ -10,7 +10,11 @@ export const authApi = {
     register: (body) => apiRequest('/users/register/', {
         method: 'POST',
         body: JSON.stringify(body),
-    }),
+    }, false),
+    emailAvailability: (email) => apiRequest('/users/email-availability/', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+    }, false),
     logout: () => apiRequest('/users/logout/', { method: 'POST' }, false),
     requestPasswordReset: (email) => apiRequest('/users/password-reset/', {
         method: 'POST',

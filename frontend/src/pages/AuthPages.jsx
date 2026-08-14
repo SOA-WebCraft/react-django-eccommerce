@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { authApi } from '../api/services';
 import { ApiError, fieldErrors } from '../api/client';
@@ -57,49 +57,82 @@ export function LoginPage() {
   </AuthShell>;
 }
 export function RegisterPage() {
-    const [form, setForm] = useState({ username: '', email: '', password: '', confirm: '' });
-    const [loading, setLoading] = useState(false);
+    const { register, handleSubmit, watch, setError, clearErrors, formState: { errors, isSubmitting } } = useForm({
+        defaultValues: { username: '', email: '', password: '', confirm_password: '' },
+    });
+    const [emailAvailability, setEmailAvailability] = useState('idle');
+    const availabilityRequest = useRef(0);
     const { notify } = useToast();
     const navigate = useNavigate();
-    const submit = async (event) => {
-        event.preventDefault();
-        const validation = {};
-        if (form.username.trim().length < 3)
-            validation.username = 'Use at least 3 characters.';
-        if (!form.email.includes('@'))
-            validation.email = 'Enter a valid email address.';
-        if (form.password.length < 8)
-            validation.password = 'Use at least 8 characters.';
-        if (form.password !== form.confirm)
-            validation.confirm = 'Passwords do not match.';
-        if (Object.keys(validation).length) {
-            Object.entries(validation).forEach(([field, message]) => notify(`${field}: ${message}`, 'error'));
-            return;
-        }
-        setLoading(true);
+    const emailValue = watch('email');
+    useEffect(() => {
+        const requestId = ++availabilityRequest.current;
+        setEmailAvailability('idle');
+        clearErrors('email');
+        if (!emailValue.trim())
+            return undefined;
+        const timeout = window.setTimeout(async () => {
+            setEmailAvailability('checking');
+            try {
+                await authApi.emailAvailability(emailValue);
+                if (requestId !== availabilityRequest.current)
+                    return;
+                clearErrors('email');
+                setEmailAvailability('available');
+            }
+            catch (reason) {
+                if (requestId !== availabilityRequest.current)
+                    return;
+                const backendErrors = reason instanceof ApiError ? fieldErrors(reason.data) : {};
+                setError('email', {
+                    type: 'server',
+                    message: backendErrors.email || backendErrors.detail || 'Unable to check this email address.',
+                });
+                setEmailAvailability('unavailable');
+            }
+        }, 600);
+        return () => window.clearTimeout(timeout);
+    }, [clearErrors, emailValue, setError]);
+    const submit = async ({ username, email, password, confirm_password }) => {
         try {
-            await authApi.register({ username: form.username.trim(), email: form.email.trim(), password: form.password });
+            await authApi.register({
+                username,
+                email,
+                password,
+                confirm_password,
+            });
             notify('Account created. Sign in to continue.', 'success');
             navigate('/login');
         }
         catch (reason) {
-            if (!(reason instanceof ApiError)) {
-                notify('Unable to create your account.', 'error');
+            if (reason instanceof ApiError) {
+                const backendErrors = fieldErrors(reason.data);
+                for (const field of ['username', 'email', 'password', 'confirm_password']) {
+                    if (backendErrors[field])
+                        setError(field, { type: 'server', message: backendErrors[field] });
+                }
+                const generalError = backendErrors.detail || backendErrors.non_field_errors;
+                if (generalError)
+                    setError('root.server', { type: 'server', message: generalError });
+                return;
             }
-        }
-        finally {
-            setLoading(false);
+            setError('root.server', {
+                type: 'server',
+                message: reason instanceof Error ? reason.message : 'Unable to create your account.',
+            });
         }
     };
-    return <AuthShell title="Create your account" intro="Save your cart and keep every order in one place.">
-    <form onSubmit={submit} className="auth-form">
-      <Field label="Username" name="username" autoComplete="username" required value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })}/>
-      <Field label="Email address" name="email" type="email" autoComplete="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}/>
-      <Field label="Password" name="password" type="password" autoComplete="new-password" required hint="Use at least 8 characters and avoid common passwords." value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}/>
-      <Field label="Confirm password" name="confirm" type="password" autoComplete="new-password" required value={form.confirm} onChange={(e) => setForm({ ...form, confirm: e.target.value })}/>
-      <Button type="submit" disabled={loading}>{loading ? 'Creating account…' : 'Create account'}</Button>
-    </form>
+    return <AuthShell title="Create your account" intro="Join ECCO to save your cart and keep every order in one place.">
     <SocialLoginButtons next="/account"/>
+    <div className="auth-divider"><span>or create an account with email</span></div>
+    {errors.root?.server && <Alert>{errors.root.server.message}</Alert>}
+    <form onSubmit={handleSubmit(submit)} className="auth-form auth-form--register" noValidate>
+      <Field label="Username" autoComplete="username" placeholder="Choose a username" error={errors.username?.message} {...register('username')}/>
+      <Field label="Email address" type="email" inputMode="email" autoComplete="email" placeholder="you@example.com" hint={emailAvailability === 'checking' ? 'Checking email availability…' : emailAvailability === 'available' ? 'Email is available.' : undefined} error={errors.email?.message} {...register('email')}/>
+      <Field label="Password" type="password" autoComplete="new-password" placeholder="Create a secure password" hint="Use at least 8 characters and avoid common passwords." error={errors.password?.message} {...register('password')}/>
+      <Field label="Confirm password" type="password" autoComplete="new-password" placeholder="Enter your password again" error={errors.confirm_password?.message} {...register('confirm_password')}/>
+      <Button type="submit" className="button--wide" disabled={isSubmitting}>{isSubmitting ? 'Creating account…' : 'Create account'}</Button>
+    </form>
     <p className="auth-switch">Already have an account? <Link to="/login">Sign in</Link></p>
   </AuthShell>;
 }

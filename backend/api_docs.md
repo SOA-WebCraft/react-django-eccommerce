@@ -68,7 +68,9 @@ The response sets `csrftoken`. Send its value in `X-CSRFToken` on subsequent
 
 Creates a customer account. Authentication is not required. Username and email
 are required and must be unique; email uniqueness is case-insensitive. The
-password must pass Django's configured password validators. A valid CSRF cookie
+username must contain at least three characters. The password must pass Django's
+configured password validators and match the required `confirm_password`
+field. All registration validation is performed by the API. A valid CSRF cookie
 and `X-CSRFToken` header are required.
 
 Request:
@@ -77,7 +79,8 @@ Request:
 {
   "username": "alice",
   "email": "alice@example.com",
-  "password": "A-long-safe-password-482!"
+  "password": "A-long-safe-password-482!",
+  "confirm_password": "A-long-safe-password-482!"
 }
 ```
 
@@ -100,6 +103,41 @@ Errors — `400 Bad Request`:
 ```json
 {"password": ["This password is too short."]}
 ```
+
+```json
+{"confirm_password": ["Passwords do not match."]}
+```
+
+`password` and `confirm_password` are write-only and are never returned.
+
+### POST `/api/users/email-availability/`
+
+Validates an email while the registration form is being completed. The public
+endpoint requires a CSRF cookie/header and is throttled to 60 requests per hour
+per client. It accepts no authentication and returns no account details. Email
+format and case-insensitive availability are validated by Django; final
+registration repeats the same availability check and remains authoritative.
+
+Request:
+
+```json
+{"email": "alice@example.com"}
+```
+
+Success — `200 OK`:
+
+```json
+{"available": true}
+```
+
+Existing or invalid email — `400 Bad Request`:
+
+```json
+{"email": ["An account with this email address already exists."]}
+```
+
+Missing or invalid CSRF returns `403 Forbidden`; exceeding the rate limit
+returns `429 Too Many Requests`.
 
 ### GET `/api/users/me/`
 
