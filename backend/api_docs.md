@@ -66,9 +66,10 @@ The response sets `csrftoken`. Send its value in `X-CSRFToken` on subsequent
 
 ### POST `/api/users/register/`
 
-Creates a customer account. Authentication is not required. The username must be
-unique and the password must pass Django's configured password validators. A
-valid CSRF cookie and `X-CSRFToken` header are required.
+Creates a customer account. Authentication is not required. Username and email
+are required and must be unique; email uniqueness is case-insensitive. The
+password must pass Django's configured password validators. A valid CSRF cookie
+and `X-CSRFToken` header are required.
 
 Request:
 
@@ -90,6 +91,10 @@ Errors — `400 Bad Request`:
 
 ```json
 {"username": ["A user with that username already exists."]}
+```
+
+```json
+{"email": ["An account with this email address already exists."]}
 ```
 
 ```json
@@ -143,7 +148,9 @@ unchanged. Sending `null` or an empty string clears an optional profile field to
 database `NULL`. Username, IDs, permissions, timestamps, and passwords cannot be
 updated here. `PUT` is unsupported and returns `405 Method Not Allowed`.
 
-Changing `email` requires `current_password`; profile-only changes do not.
+Changing `email` requires `current_password`; profile-only changes do not. The
+new email must not already belong to another account, using case-insensitive
+matching.
 `current_password` is write-only and is never returned.
 
 Request:
@@ -178,14 +185,17 @@ Unauthenticated requests return `401`; missing or invalid CSRF returns `403`.
 
 ### POST `/api/users/login/`
 
-Authenticates a username and password, rotates the session identifier, and
+Authenticates an email address and password, rotates the session identifier, and
 returns the safe user profile. Authentication is not required, but a valid CSRF
 cookie and `X-CSRFToken` header are required.
+
+Email matching is case-insensitive. New registrations and profile email changes
+must use an email address that is not already assigned to another account.
 
 Request:
 
 ```json
-{"username": "alice", "password": "A-long-safe-password-482!"}
+{"email": "alice@example.com", "password": "A-long-safe-password-482!"}
 ```
 
 Success — `200 OK`:
@@ -211,7 +221,7 @@ Success — `200 OK`:
 Error — `401 Unauthorized`:
 
 ```json
-{"detail": "Invalid username or password."}
+{"detail": "Invalid email or password."}
 ```
 
 The response sets a new HttpOnly `sessionid` cookie. Missing or invalid CSRF

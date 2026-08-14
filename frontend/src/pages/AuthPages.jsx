@@ -9,7 +9,7 @@ import { FcGoogle } from 'react-icons/fc';
 import { FaApple, FaFacebookF, FaLinkedinIn } from 'react-icons/fa';
 import { FiLock, FiPackage, FiRefreshCw } from 'react-icons/fi';
 export function LoginPage() {
-    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -21,13 +21,13 @@ export function LoginPage() {
     const submit = async (event) => {
         event.preventDefault();
         setError('');
-        if (!username.trim() || !password) {
-            setError('Enter your username and password to continue.');
+        if (!email.trim() || !password) {
+            setError('Enter your email address and password to continue.');
             return;
         }
         setLoading(true);
         try {
-            const authenticatedUser = await login(username.trim(), password);
+            const authenticatedUser = await login(email.trim().toLowerCase(), password);
             notify('Welcome back.', 'success');
             const destination = authenticatedUser.can_manage_orders || authenticatedUser.can_manage_catalog ? '/' : from;
             navigate(destination, { replace: true });
@@ -47,7 +47,7 @@ export function LoginPage() {
     <div className="auth-divider"><span>or sign in with your account</span></div>
     {error && <Alert>{error}</Alert>}
     <form onSubmit={submit} className="auth-form" autoComplete="off">
-      <Field label="Username" name="login_username" autoComplete="off" placeholder="Enter your username" required value={username} onChange={(e) => setUsername(e.target.value)}/>
+      <Field label="Email address" name="login_email" type="email" inputMode="email" autoComplete="off" placeholder="you@example.com" required value={email} onChange={(e) => setEmail(e.target.value)}/>
       <div className="auth-password-heading"><span>Password</span><Link to="/forgot-password">Forgot password?</Link></div>
       <Field label={<span className="sr-only">Password</span>} name="login_password" type="password" autoComplete="off" placeholder="Enter your password" required value={password} onChange={(e) => setPassword(e.target.value)}/>
       <Button type="submit" className="button--wide" disabled={loading}>{loading ? 'Signing in…' : 'Sign in securely'}</Button>

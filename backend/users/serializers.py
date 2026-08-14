@@ -33,7 +33,7 @@ def allowed_permissions():
 
 
 class LoginSerializer(serializers.Serializer):
-    username = serializers.CharField()
+    email = serializers.EmailField()
     password = serializers.CharField(
         write_only=True,
         style={'input_type': 'password'},
@@ -290,6 +290,16 @@ class ProfileUpdateSerializer(serializers.Serializer):
         'country',
     )
 
+    def validate_email(self, value):
+        normalized = value.strip().lower()
+        if User.objects.filter(email__iexact=normalized).exclude(
+            pk=self.instance.pk,
+        ).exists():
+            raise serializers.ValidationError(
+                'An account with this email address already exists.'
+            )
+        return normalized
+
     def validate(self, attrs):
         allowed = {'email', 'current_password', *self.profile_fields}
         unexpected = set(self.initial_data) - allowed
@@ -337,6 +347,15 @@ class RegistrationSerializer(serializers.ModelSerializer):
         model = User
         fields = ('id', 'username', 'email', 'password')
         read_only_fields = ('id',)
+        extra_kwargs = {'email': {'required': True, 'allow_blank': False}}
+
+    def validate_email(self, value):
+        normalized = value.strip().lower()
+        if User.objects.filter(email__iexact=normalized).exists():
+            raise serializers.ValidationError(
+                'An account with this email address already exists.'
+            )
+        return normalized
 
     def validate_password(self, value):
         validate_password(value)

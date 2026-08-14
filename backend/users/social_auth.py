@@ -162,7 +162,7 @@ def login_or_create_social_user(provider, profile):
     User = get_user_model()
     matches = list(User.objects.filter(email__iexact=email, is_active=True)[:2])
     if len(matches) > 1:
-        raise SocialAuthError('This email matches multiple accounts. Sign in with your username first.')
+        raise SocialAuthError('This email matches multiple accounts. Contact support for assistance.')
     if matches:
         user = matches[0]
     else:

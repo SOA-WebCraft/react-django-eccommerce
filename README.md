@@ -568,3 +568,19 @@ https://ecco-storefront.vercel.app/api/users/social-login/<provider>/callback/
 Use `google`, `apple`, `facebook`, or `linkedin` for `<provider>`. Restart Django
 after changing local credentials and redeploy the backend after changing hosted
 credentials.
+
+For Facebook, create a Meta app with the Facebook Login product, request
+`email` and `public_profile`, and add this exact production **Valid OAuth Redirect
+URI**:
+
+```text
+https://ecco-storefront.vercel.app/api/users/social-login/facebook/callback/
+```
+
+Set `FACEBOOK_OAUTH_CLIENT_ID` to the Meta App ID and
+`FACEBOOK_OAUTH_CLIENT_SECRET` to the Meta App Secret in the backend hosting
+environment. Keep the secret out of Vercel and source control. Add the live
+storefront domain to the app's allowed domains, provide Meta's required privacy
+policy/data-deletion URLs, switch the app to Live when ready for public users,
+and redeploy Django. While the Meta app remains in Development mode, only app
+administrators, developers, and testers can sign in.

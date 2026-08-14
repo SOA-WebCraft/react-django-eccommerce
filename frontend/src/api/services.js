@@ -3,9 +3,9 @@ export const authApi = {
     csrf: () => apiRequest('/users/csrf/'),
     socialProviders: () => apiRequest('/users/social-providers/', {}, false),
     socialLoginUrl: (provider, next = '/account') => `${API_BASE}/users/social-login/${provider}/?${new URLSearchParams({ next })}`,
-    login: (username, password) => apiRequest('/users/login/', {
+    login: (email, password) => apiRequest('/users/login/', {
         method: 'POST',
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ email, password }),
     }),
     register: (body) => apiRequest('/users/register/', {
         method: 'POST',

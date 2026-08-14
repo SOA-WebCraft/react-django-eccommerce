@@ -26,8 +26,8 @@ export function AuthProvider({ children }) {
         user,
         loading,
         isAuthenticated: Boolean(user),
-        async login(username, password) {
-            const authenticatedUser = await authApi.login(username, password);
+        async login(email, password) {
+            const authenticatedUser = await authApi.login(email, password);
             setUser(authenticatedUser);
             return authenticatedUser;
         },

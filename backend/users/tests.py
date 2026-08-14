@@ -19,7 +19,7 @@ from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
 from .models import Profile, SocialIdentity
-from .social_auth import login_or_create_social_user
+from .social_auth import login_or_create_social_user, profile_from_token
 from catalog.roles import CATALOG_MANAGERS_GROUP
 from orders.models import Order
 
@@ -67,6 +67,46 @@ class UserApiTests(APITestCase):
                 'email_verified': False,
             })
 
+    def test_facebook_profile_is_normalized_for_account_creation(self):
+        class FacebookResponse:
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return {
+                    'id': 'facebook-member-42',
+                    'email': 'facebook@example.com',
+                    'first_name': 'Facebook',
+                    'last_name': 'Customer',
+                }
+
+        class FacebookClient:
+            def get(self, url, token):
+                self.url = url
+                self.token = token
+                return FacebookResponse()
+
+        client = FacebookClient()
+        profile = profile_from_token(
+            'facebook',
+            client,
+            {'access_token': 'provider-token'},
+        )
+        user = login_or_create_social_user('facebook', profile)
+
+        self.assertEqual(profile['sub'], 'facebook-member-42')
+        self.assertTrue(profile['email_verified'])
+        self.assertEqual(user.email, 'facebook@example.com')
+        self.assertEqual(user.profile.first_name, 'Facebook')
+        self.assertEqual(user.profile.last_name, 'Customer')
+        self.assertTrue(
+            SocialIdentity.objects.filter(
+                user=user,
+                provider=SocialIdentity.Provider.FACEBOOK,
+                subject='facebook-member-42',
+            ).exists()
+        )
+
     def test_profile_is_created_with_nullable_fields_and_registered_in_admin(self):
         user = User.objects.create_user(username='profile-user', password='safe-password')
         profile = user.profile
@@ -95,16 +135,35 @@ class UserApiTests(APITestCase):
     def test_register_rejects_weak_password(self):
         response = self.client.post(
             reverse('user-register'),
-            {'username': 'alice', 'password': '123'},
+            {'username': 'alice', 'email': 'alice@example.com', 'password': '123'},
             format='json',
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('password', response.data)
 
+    def test_register_rejects_duplicate_email_case_insensitively(self):
+        User.objects.create_user(
+            username='existing',
+            email='alice@example.com',
+            password='A-long-safe-password-482!',
+        )
+        response = self.client.post(
+            reverse('user-register'),
+            {
+                'username': 'alice',
+                'email': 'ALICE@example.com',
+                'password': 'A-long-safe-password-482!',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('email', response.data)
+
     def test_session_login_and_current_user(self):
         User.objects.create_user(
             username='alice',
+            email='alice@example.com',
             password='A-long-safe-password-482!',
         )
         csrf_response = self.client.get(reverse('user-csrf'))
@@ -112,7 +171,7 @@ class UserApiTests(APITestCase):
         login_response = self.client.post(
             reverse('user-login'),
             {
-                'username': 'alice',
+                'email': 'ALICE@example.com',
                 'password': 'A-long-safe-password-482!',
             },
             format='json',
@@ -132,6 +191,7 @@ class UserApiTests(APITestCase):
     def test_staff_login_and_current_user_expose_order_capability(self):
         staff = User.objects.create_user(
             username='staff',
+            email='staff@example.com',
             password='A-long-safe-password-482!',
             is_staff=True,
         )
@@ -139,7 +199,7 @@ class UserApiTests(APITestCase):
         login = self.client.post(
             reverse('user-login'),
             {
-                'username': 'staff',
+                'email': 'staff@example.com',
                 'password': 'A-long-safe-password-482!',
             },
             format='json',
@@ -156,6 +216,7 @@ class UserApiTests(APITestCase):
     def test_login_rotates_existing_session_identifier(self):
         User.objects.create_user(
             username='alice',
+            email='alice@example.com',
             password='A-long-safe-password-482!',
         )
         session = self.client.session
@@ -167,7 +228,7 @@ class UserApiTests(APITestCase):
         response = self.client.post(
             reverse('user-login'),
             {
-                'username': 'alice',
+                'email': 'alice@example.com',
                 'password': 'A-long-safe-password-482!',
             },
             format='json',
@@ -182,13 +243,14 @@ class UserApiTests(APITestCase):
     def test_session_logout_invalidates_current_session(self):
         User.objects.create_user(
             username='alice',
+            email='alice@example.com',
             password='A-long-safe-password-482!',
         )
         self.client.get(reverse('user-csrf'))
         self.client.post(
             reverse('user-login'),
             {
-                'username': 'alice',
+                'email': 'alice@example.com',
                 'password': 'A-long-safe-password-482!',
             },
             format='json',
@@ -204,16 +266,35 @@ class UserApiTests(APITestCase):
     def test_session_login_rejects_invalid_credentials(self):
         User.objects.create_user(
             username='alice',
+            email='alice@example.com',
             password='A-long-safe-password-482!',
         )
         self.client.get(reverse('user-csrf'))
         response = self.client.post(
             reverse('user-login'),
-            {'username': 'alice', 'password': 'incorrect'},
+            {'email': 'alice@example.com', 'password': 'incorrect'},
             format='json',
         )
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_session_login_rejects_ambiguous_legacy_email(self):
+        for username in ('alice', 'alice-legacy'):
+            User.objects.create_user(
+                username=username,
+                email='alice@example.com',
+                password='A-long-safe-password-482!',
+            )
+        response = self.client.post(
+            reverse('user-login'),
+            {
+                'email': 'alice@example.com',
+                'password': 'A-long-safe-password-482!',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['detail'], 'Invalid email or password.')
 
     def test_current_user_requires_authentication(self):
         response = self.client.get(reverse('user-me'))
@@ -271,6 +352,29 @@ class UserApiTests(APITestCase):
         self.assertEqual(accepted.data['email'], 'new@example.com')
         self.assertNotIn('current_password', accepted.data)
 
+    def test_email_change_rejects_another_accounts_email(self):
+        user = User.objects.create_user(
+            username='alice',
+            email='alice@example.com',
+            password='A-long-safe-password-482!',
+        )
+        User.objects.create_user(
+            username='bob',
+            email='bob@example.com',
+            password='A-long-safe-password-482!',
+        )
+        self.client.force_authenticate(user)
+        response = self.client.patch(
+            reverse('user-me'),
+            {
+                'email': 'BOB@example.com',
+                'current_password': 'A-long-safe-password-482!',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('email', response.data)
+
     def test_profile_patch_rejects_protected_fields_and_put(self):
         user = User.objects.create_user(username='alice', password='secret')
         self.client.force_authenticate(user)
@@ -308,13 +412,14 @@ class UserApiTests(APITestCase):
         csrf_client = APIClient(enforce_csrf_checks=True)
         User.objects.create_user(
             username='alice',
+            email='alice@example.com',
             password='A-long-safe-password-482!',
         )
 
         login = csrf_client.post(
             reverse('user-login'),
             {
-                'username': 'alice',
+                'email': 'alice@example.com',
                 'password': 'A-long-safe-password-482!',
             },
             format='json',
@@ -323,6 +428,7 @@ class UserApiTests(APITestCase):
             reverse('user-register'),
             {
                 'username': 'bob',
+                'email': 'bob@example.com',
                 'password': 'A-long-safe-password-482!',
             },
             format='json',
@@ -338,6 +444,7 @@ class UserApiTests(APITestCase):
         csrf_client = APIClient(enforce_csrf_checks=True)
         User.objects.create_user(
             username='alice',
+            email='alice@example.com',
             password='A-long-safe-password-482!',
         )
         csrf_client.get(reverse('user-csrf'))
@@ -346,7 +453,7 @@ class UserApiTests(APITestCase):
         login = csrf_client.post(
             reverse('user-login'),
             {
-                'username': 'alice',
+                'email': 'alice@example.com',
                 'password': 'A-long-safe-password-482!',
             },
             format='json',
@@ -379,6 +486,7 @@ class UserApiTests(APITestCase):
         csrf_client = APIClient(enforce_csrf_checks=True)
         User.objects.create_user(
             username='alice',
+            email='alice@example.com',
             password='A-long-safe-password-482!',
         )
         csrf_client.get(reverse('user-csrf'))
@@ -386,7 +494,7 @@ class UserApiTests(APITestCase):
         response = csrf_client.post(
             reverse('user-login'),
             {
-                'username': 'alice',
+                'email': 'alice@example.com',
                 'password': 'A-long-safe-password-482!',
             },
             format='json',

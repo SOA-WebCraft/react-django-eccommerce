@@ -169,14 +169,19 @@ class LoginView(APIView):
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = authenticate(
-            request=request,
-            username=serializer.validated_data['username'],
-            password=serializer.validated_data['password'],
-        )
+        matches = list(User.objects.filter(
+            email__iexact=serializer.validated_data['email'],
+        )[:2])
+        user = None
+        if len(matches) == 1:
+            user = authenticate(
+                request=request,
+                username=matches[0].get_username(),
+                password=serializer.validated_data['password'],
+            )
         if user is None:
             return Response(
-                {'detail': 'Invalid username or password.'},
+                {'detail': 'Invalid email or password.'},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
         login(request, user)
