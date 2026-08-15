@@ -172,7 +172,7 @@ export function ProductDetailPage() {
             setSavingWishlist(false);
         }
     };
-    return (<div className="container page">
+    return (<div className="container page product-detail-page">
       <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to="/">Home</Link><span>/</span><Link to="/products">Products</Link><span>/</span><span>{product.name}</span></nav>
       <article className="product-detail">
         <div className="gallery">

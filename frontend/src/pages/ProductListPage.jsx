@@ -80,7 +80,7 @@ export function ProductListPage() {
         }
     };
     return (<div className="container page">
-      <div className="page-heading">
+      <div className="page-heading catalog-page-heading page-visual-banner">
         <div><p className="eyebrow">The collection</p><h1>All products</h1><p>{count} thoughtfully selected products</p></div>
         <Button className="filter-toggle" variant="secondary" onClick={() => setFiltersOpen(true)}>Filters</Button>
       </div>

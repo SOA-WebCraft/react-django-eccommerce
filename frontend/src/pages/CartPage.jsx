@@ -34,9 +34,9 @@ export function CartPage() {
     if (loading && !cart)
         return <div className="container page"><Loader label="Loading your bag"/></div>;
     if (!cart?.items.length)
-        return <div className="container page"><EmptyState title="Your bag is ready for something brilliant" action={<Link className="button button--primary" to="/products">Explore products</Link>}>Products you add will be saved to your account cart.</EmptyState></div>;
-    return (<div className="container page">
-      <div className="page-heading"><div><p className="eyebrow">Your selection</p><h1>Shopping bag</h1><p>{cart.items.length} unique {cart.items.length === 1 ? 'item' : 'items'}</p></div></div>
+        return <div className="container page cart-page"><div className="page-heading cart-page-heading page-visual-banner"><div><p className="eyebrow">Your selection</p><h1>Shopping bag</h1><p>Build a collection around the way you live.</p></div></div><EmptyState title="Your bag is ready for something brilliant" action={<Link className="button button--primary" to="/products">Explore products</Link>}>Products you add will be saved to your account cart.</EmptyState></div>;
+    return (<div className="container page cart-page">
+      <div className="page-heading cart-page-heading page-visual-banner"><div><p className="eyebrow">Your selection</p><h1>Shopping bag</h1><p>{cart.items.length} unique {cart.items.length === 1 ? 'item' : 'items'}</p></div></div>
       {error && <Alert>{error}</Alert>}
       <div className="cart-layout">
         <section className="cart-items" aria-label="Cart items">
