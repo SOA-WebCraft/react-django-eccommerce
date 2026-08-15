@@ -1,15 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="ECCO">
   <defs>
     <linearGradient id="background" x1="8" y1="5" x2="56" y2="59" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#4778ff"/>
-      <stop offset="1" stop-color="#173ca8"/>
+      <stop stop-color="#20a878"/>
+      <stop offset="1" stop-color="#056445"/>
     </linearGradient>
     <linearGradient id="shine" x1="18" y1="12" x2="45" y2="53" gradientUnits="userSpaceOnUse">
       <stop stop-color="#fff"/>
-      <stop offset="1" stop-color="#dbe7ff"/>
+      <stop offset="1" stop-color="#d9f5e9"/>
     </linearGradient>
   </defs>
-  <rect width="64" height="64" rx="17" fill="#0b1220"/>
+  <rect width="64" height="64" rx="17" fill="#10211b"/>
   <rect x="5" y="5" width="54" height="54" rx="14" fill="url(#background)"/>
   <path d="M18 17.5h30v8H27v6h18v7H27v6h21v8H18v-35Z" fill="url(#shine)"/>
 </svg>

@@ -26,7 +26,7 @@ export function AnalyticsPage() {
     if (!analytics)
         return null;
     const { summary } = analytics;
-    const donutColors = { pending: '#f4bf32', processing: '#3568e8', shipped: '#805ad5', delivered: '#23b783', cancelled: '#dc4c3f' };
+    const donutColors = { pending: '#f4bf32', processing: '#0c8a61', shipped: '#6f63a8', delivered: '#23b783', cancelled: '#dc4c3f' };
     const connectionLabel = { live: 'Live stream', connecting: 'Connecting', reconnecting: 'Reconnecting', fallback: 'REST fallback' }[connection];
     return <div className="analytics-shell"><div className="container page analytics-page">
       <div className="page-heading analytics-heading"><div><p className="eyebrow">Staff workspace</p><h1>Store intelligence</h1><p>Live revenue, order activity, product performance, and inventory health.</p><div className={`analytics-live analytics-live--${connection}`} role="status"><span/><strong>{connectionLabel}</strong>{lastUpdated && <time dateTime={lastUpdated.toISOString()}>Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</time>}</div></div></div>

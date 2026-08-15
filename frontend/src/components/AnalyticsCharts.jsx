@@ -62,9 +62,9 @@ export function SalesTrendChart({ sales }) {
         type: 'line',
         data: { labels, datasets: [{
             label: 'Paid revenue', data: revenue, fill: true,
-            borderColor: '#315ee2', backgroundColor: 'rgba(49,94,226,.12)',
+            borderColor: '#0c8a61', backgroundColor: 'rgba(12,138,97,.12)',
             borderWidth: 3, pointRadius: 0, pointHoverRadius: 6,
-            pointBackgroundColor: '#fff', pointBorderColor: '#315ee2',
+            pointBackgroundColor: '#fff', pointBorderColor: '#0c8a61',
             pointBorderWidth: 3, tension: .35,
         }] },
         options: {
@@ -123,7 +123,7 @@ export function TopProductsChart({ products }) {
     const values = { labels, datasets: [quantities] };
     const createConfig = () => ({
         type: 'bar',
-        data: { labels, datasets: [{ label: 'Units sold', data: quantities, backgroundColor: '#315ee2', borderRadius: 7, barThickness: 17 }] },
+        data: { labels, datasets: [{ label: 'Units sold', data: quantities, backgroundColor: '#0c8a61', borderRadius: 7, barThickness: 17 }] },
         options: {
             indexAxis: 'y', responsive: true, maintainAspectRatio: false,
             plugins: { legend: { display: false }, tooltip: { callbacks: { afterLabel: (context) => `Revenue: ${formatPrice(products[context.dataIndex].revenue)}` } } },

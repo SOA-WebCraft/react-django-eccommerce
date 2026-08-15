@@ -128,7 +128,7 @@ function CategoryBannerCarousel() {
       <div className="category-showcase__viewport" aria-live="polite">
         {categoryBanners.map((banner, index) => <article
           className={`category-showcase__slide${index === active ? ' is-active' : ''}`}
-          style={{ backgroundImage: `linear-gradient(90deg, rgba(3, 9, 22, .98), rgba(5, 16, 41, .84) 43%, rgba(5, 16, 41, .08) 76%), url(${banner.image})` }}
+          style={{ backgroundImage: `linear-gradient(90deg, rgba(3, 18, 14, .98), rgba(5, 45, 32, .84) 43%, rgba(5, 45, 32, .08) 76%), url(${banner.image})` }}
           aria-hidden={index !== active}
           key={banner.slug}
         >
