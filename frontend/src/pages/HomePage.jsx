@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { FiArrowRight, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import { catalogApi } from '../api/services';
 import { ProductCard } from '../components/ProductCard';
@@ -10,6 +11,13 @@ const categorySymbols = {
     smartwatches: '◫',
     accessories: '⌁',
 };
+const categoryBanners = [
+    { slug: 'accessories', title: 'Accessories that complete the setup.', copy: 'Power, sound, storage and everyday essentials selected to work beautifully together.', image: '/images/category-accessories.webp' },
+    { slug: 'laptops', title: 'Performance made portable.', copy: 'Explore capable laptops for focused work, ambitious ideas and everything between.', image: '/images/category-laptops.webp' },
+    { slug: 'smartphones', title: 'Your world, always within reach.', copy: 'Discover flagship smartphones built for exceptional photos, speed and connection.', image: '/images/category-smartphones.webp' },
+    { slug: 'smartwatches', title: 'Move smarter every day.', copy: 'Keep time, health and daily goals close with modern watches designed for real life.', image: '/images/category-smartwatches.webp' },
+    { slug: 'tablets', title: 'Create, watch and work anywhere.', copy: 'Find versatile tablets that shift effortlessly from entertainment to productivity.', image: '/images/category-tablets.webp' },
+];
 export function HomePage() {
     const [featured, setFeatured] = useState([]);
     const [newArrivals, setNewArrivals] = useState([]);
@@ -43,6 +51,8 @@ export function HomePage() {
         </div>
         <div className="hero__orb hero__orb--one"/><div className="hero__orb hero__orb--two"/>
       </section>
+
+      <CategoryBannerCarousel />
 
       <section className="section container">
         <div className="section-heading"><div><p className="eyebrow">Find your fit</p><h2>Shop by category</h2></div></div>
@@ -86,4 +96,56 @@ export function HomePage() {
         </div>
       </section>
     </>);
+}
+
+function CategoryBannerCarousel() {
+    const [active, setActive] = useState(0);
+    const [paused, setPaused] = useState(false);
+    useEffect(() => {
+        if (paused || window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+            return undefined;
+        const timer = window.setInterval(
+            () => setActive((current) => (current + 1) % categoryBanners.length),
+            6000,
+        );
+        return () => window.clearInterval(timer);
+    }, [paused]);
+    const move = (direction) => {
+        setActive((current) => (current + direction + categoryBanners.length) % categoryBanners.length);
+    };
+    return (<section
+      className="category-showcase container"
+      aria-label="Shop featured categories"
+      aria-roledescription="carousel"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget))
+            setPaused(false);
+    }}
+    >
+      <div className="category-showcase__viewport" aria-live="polite">
+        {categoryBanners.map((banner, index) => <article
+          className={`category-showcase__slide${index === active ? ' is-active' : ''}`}
+          style={{ backgroundImage: `linear-gradient(90deg, rgba(3, 9, 22, .98), rgba(5, 16, 41, .84) 43%, rgba(5, 16, 41, .08) 76%), url(${banner.image})` }}
+          aria-hidden={index !== active}
+          key={banner.slug}
+        >
+          <div className="category-showcase__content">
+            <p className="eyebrow">Explore {banner.slug}</p>
+            <h2>{banner.title}</h2>
+            <p>{banner.copy}</p>
+            <Link className="button button--secondary" to={`/products?category=${banner.slug}`} tabIndex={index === active ? 0 : -1}>
+              Shop {banner.slug} <FiArrowRight aria-hidden="true"/>
+            </Link>
+          </div>
+        </article>)}
+      </div>
+      <button className="category-showcase__arrow category-showcase__arrow--previous" type="button" onClick={() => move(-1)} aria-label="Previous category"><FiChevronLeft aria-hidden="true"/></button>
+      <button className="category-showcase__arrow category-showcase__arrow--next" type="button" onClick={() => move(1)} aria-label="Next category"><FiChevronRight aria-hidden="true"/></button>
+      <div className="category-showcase__controls" role="group" aria-label="Choose category banner">
+        {categoryBanners.map((banner, index) => <button type="button" className={index === active ? 'is-active' : ''} onClick={() => setActive(index)} aria-label={`Show ${banner.slug}`} aria-current={index === active ? 'true' : undefined} key={banner.slug}><span /></button>)}
+      </div>
+    </section>);
 }
