@@ -7,6 +7,7 @@ import { Alert, Button, EmptyState, Field, Loader, Pagination } from '../compone
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
 import { useCart } from '../hooks/useCart';
+import { usePageMeta } from '../hooks/usePageMeta';
 export function ProductListPage() {
     const { notify } = useToast();
     const { isAuthenticated } = useAuth();
@@ -25,6 +26,14 @@ export function ProductListPage() {
     const [minPrice, setMinPrice] = useState(params.get('min_price') || '');
     const [maxPrice, setMaxPrice] = useState(params.get('max_price') || '');
     const page = Number(params.get('page') || 1);
+    const categoryLabel = categories.find((category) => category.slug === params.get('category'))?.name;
+    const searchLabel = params.get('search');
+    usePageMeta({
+        title: searchLabel ? `Search results for ${searchLabel}` : categoryLabel || 'Shop all products',
+        description: categoryLabel
+            ? `Shop ECCO's selection of ${categoryLabel.toLowerCase()}, with secure checkout and live stock availability.`
+            : 'Browse smartphones, laptops, tablets, smartwatches, and accessories available from ECCO.',
+    });
     useEffect(() => {
         catalogApi.categories().then((data) => setCategories(data.results)).catch(() => undefined);
     }, []);

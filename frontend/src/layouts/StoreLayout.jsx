@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-    FiChevronDown, FiGrid, FiHeart, FiLogOut, FiMenu, FiSearch,
+    FiChevronDown, FiColumns, FiGrid, FiHeart, FiLogOut, FiMenu,
     FiShoppingCart, FiUser, FiX,
 } from 'react-icons/fi';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
@@ -9,15 +9,17 @@ import { useAuth } from '../hooks/useAuth';
 import { useCart } from '../hooks/useCart';
 import { useToast } from '../hooks/useToast';
 import { useWishlist } from '../hooks/useWishlist';
+import { SearchBox } from '../components/SearchBox';
+import { useCompare } from '../hooks/useCompare';
 export function StoreLayout() {
     const [categories, setCategories] = useState([]);
     const [menuOpen, setMenuOpen] = useState(false);
     const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-    const [search, setSearch] = useState('');
     const accountMenuRef = useRef(null);
     const { user, isAuthenticated, logout } = useAuth();
     const { count, clearLocal: clearCart } = useCart();
     const { count: wishlistCount, clearLocal: clearWishlist } = useWishlist();
+    const { count: compareCount } = useCompare();
     const { notify } = useToast();
     const navigate = useNavigate();
     const location = useLocation();
@@ -45,12 +47,6 @@ export function StoreLayout() {
             document.removeEventListener('keydown', closeAccountMenuWithKeyboard);
         };
     }, []);
-    const submitSearch = (event) => {
-        event.preventDefault();
-        const value = search.trim();
-        navigate(value ? `/products?search=${encodeURIComponent(value)}` : '/products');
-        setMenuOpen(false);
-    };
     return (<>
       <a className="skip-link" href="#main-content">Skip to content</a>
       <div className="announcement">
@@ -68,11 +64,7 @@ export function StoreLayout() {
             <span className="brand__mark" aria-hidden="true">E</span>
             <span className="brand__word">EC<strong>CO</strong></span>
           </Link>
-          <form className="header-search header-search--desktop" role="search" onSubmit={submitSearch}>
-            <label className="sr-only" htmlFor="site-search">Search products</label>
-            <input id="site-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search phones, laptops, accessories…"/>
-            <button type="submit" aria-label="Search"><FiSearch aria-hidden="true"/></button>
-          </form>
+          <SearchBox className="header-search--desktop" inputId="site-search" placeholder="Search phones, laptops, accessories…" onNavigate={() => setMenuOpen(false)}/>
           <nav className="header-actions" aria-label="Customer navigation">
             {isAuthenticated ? (<div className="user-menu" ref={accountMenuRef}>
                 <button
@@ -119,17 +111,17 @@ export function StoreLayout() {
               <FiHeart className="cart-link__icon" aria-hidden="true"/>
               <span className="cart-link__count" aria-hidden="true">{wishlistCount}</span>
             </NavLink>}
+            <NavLink to="/compare" className="cart-link compare-link" aria-label={`Compare ${compareCount} products`}>
+              <FiColumns className="cart-link__icon" aria-hidden="true"/>
+              {compareCount > 0 && <span className="cart-link__count" aria-hidden="true">{compareCount}</span>}
+            </NavLink>
             <NavLink to="/cart" className="cart-link" aria-label={`Cart with ${count} items`}>
               <FiShoppingCart className="cart-link__icon" aria-hidden="true"/>
               <span className="cart-link__count" aria-hidden="true">{count}</span>
             </NavLink>
           </nav>
         </div>
-        <form className="header-search header-search--mobile container" role="search" onSubmit={submitSearch}>
-          <label className="sr-only" htmlFor="mobile-site-search">Search products</label>
-          <input id="mobile-site-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search the store"/>
-          <button type="submit" aria-label="Search"><FiSearch aria-hidden="true"/></button>
-        </form>
+        <SearchBox className="header-search--mobile container" inputId="mobile-site-search" onNavigate={() => setMenuOpen(false)}/>
         <nav className={`category-nav ${menuOpen ? 'category-nav--open' : ''}`} aria-label="Product categories">
           <div className="container">
             <NavLink to="/products" onClick={() => setMenuOpen(false)}>Shop all</NavLink>

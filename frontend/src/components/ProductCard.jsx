@@ -8,16 +8,19 @@ import { ProductPrice } from './ProductPrice';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import { useWishlist } from '../hooks/useWishlist';
+import { useCompare } from '../hooks/useCompare';
 import { productPath } from '../utils/productPath';
 export function ProductCard({ product, onAddToCart, adding = false, inCart = false }) {
     const detailPath = productPath(product);
     const { isAuthenticated } = useAuth();
     const { has, toggle } = useWishlist();
     const { notify } = useToast();
+    const { has: isCompared, toggle: toggleCompare } = useCompare();
     const navigate = useNavigate();
     const location = useLocation();
     const [savingWishlist, setSavingWishlist] = useState(false);
     const wishlisted = has(product.id);
+    const compared = isCompared(product.slug);
     const available = product.is_active && product.stock_quantity > 0;
     const toggleWishlist = async () => {
         if (!isAuthenticated) {
@@ -35,6 +38,15 @@ export function ProductCard({ product, onAddToCart, adding = false, inCart = fal
         }
         finally {
             setSavingWishlist(false);
+        }
+    };
+    const handleCompare = () => {
+        try {
+            const added = toggleCompare(product.slug);
+            notify(added ? `${product.name} added to comparison.` : `${product.name} removed from comparison.`, 'success');
+        }
+        catch (reason) {
+            notify(reason.message, 'error');
         }
     };
     return (<article className="product-card">
@@ -61,6 +73,7 @@ export function ProductCard({ product, onAddToCart, adding = false, inCart = fal
               View
             </Link>)}
         </div>
+        <button type="button" className={`product-card__compare${compared ? ' is-active' : ''}`} onClick={handleCompare} aria-pressed={compared}>{compared ? 'Remove from compare' : 'Compare product'}</button>
       </div>
     </article>);
 }

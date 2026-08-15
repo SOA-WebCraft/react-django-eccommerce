@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import { catalogApi } from '../api/services';
 import { ProductCard } from '../components/ProductCard';
 import { Alert, Loader } from '../components/ui';
+import { getRecentlyViewed } from '../utils/recentlyViewed';
+import { usePageMeta } from '../hooks/usePageMeta';
 const categorySymbols = {
     smartphones: '▯',
     laptops: '▱',
@@ -19,9 +21,14 @@ const categoryBanners = [
     { slug: 'tablets', title: 'Create, watch and work anywhere.', copy: 'Find versatile tablets that shift effortlessly from entertainment to productivity.', image: '/images/category-tablets.webp' },
 ];
 export function HomePage() {
+    usePageMeta({
+        title: 'Premium technology for everyday life',
+        description: 'Discover flagship phones, laptops, tablets, smartwatches, and accessories selected by ECCO.',
+    });
     const [featured, setFeatured] = useState([]);
     const [newArrivals, setNewArrivals] = useState([]);
     const [categories, setCategories] = useState([]);
+    const [recentlyViewed, setRecentlyViewed] = useState([]);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(true);
     useEffect(() => {
@@ -37,6 +44,14 @@ export function HomePage() {
         })
             .catch((reason) => setError(reason.message))
             .finally(() => setLoading(false));
+    }, []);
+    useEffect(() => {
+        const slugs = getRecentlyViewed().slice(0, 4);
+        if (!slugs.length)
+            return;
+        Promise.allSettled(slugs.map((slug) => catalogApi.product(slug))).then((results) => {
+            setRecentlyViewed(results.filter((result) => result.status === 'fulfilled').map((result) => result.value));
+        });
     }, []);
     return (<>
       <section className="hero">
@@ -87,6 +102,13 @@ export function HomePage() {
         </div>
         {loading ? <Loader /> : <div className="product-grid product-grid--four">{newArrivals.map((product) => <ProductCard key={product.id} product={product}/>)}</div>}
       </section>
+
+      {recentlyViewed.length > 0 && <section className="section section--recent">
+        <div className="container">
+          <div className="section-heading"><div><p className="eyebrow">Pick up where you left off</p><h2>Recently viewed</h2></div></div>
+          <div className="product-grid product-grid--four">{recentlyViewed.map((product) => <ProductCard key={product.id} product={product}/>)}</div>
+        </div>
+      </section>}
 
       <section className="benefits">
         <div className="container benefits__grid">

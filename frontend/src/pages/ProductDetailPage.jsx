@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FiEdit2, FiHeart, FiShoppingCart, FiTrash2 } from 'react-icons/fi';
+import { FiColumns, FiEdit2, FiHeart, FiShoppingCart, FiTrash2 } from 'react-icons/fi';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { catalogApi } from '../api/services';
 import { ApiError } from '../api/client';
@@ -13,6 +13,9 @@ import { useToast } from '../hooks/useToast';
 import { useWishlist } from '../hooks/useWishlist';
 import { formatPrice } from '../utils/format';
 import { productPath } from '../utils/productPath';
+import { rememberProduct } from '../utils/recentlyViewed';
+import { usePageMeta } from '../hooks/usePageMeta';
+import { useCompare } from '../hooks/useCompare';
 export function ProductDetailPage() {
     const { slug = '' } = useParams();
     const navigate = useNavigate();
@@ -20,6 +23,7 @@ export function ProductDetailPage() {
     const { cart, add, adjust } = useCart();
     const { notify } = useToast();
     const { has: isWishlisted, toggle: toggleWishlistItem } = useWishlist();
+    const { has: isCompared, toggle: toggleCompare } = useCompare();
     const [product, setProduct] = useState(null);
     const [related, setRelated] = useState([]);
     const [selectedImage, setSelectedImage] = useState('');
@@ -33,11 +37,42 @@ export function ProductDetailPage() {
     const [savingReview, setSavingReview] = useState(false);
     const [savingWishlist, setSavingWishlist] = useState(false);
     const [reviewForm, setReviewForm] = useState({ rating: 5, title: '', comment: '' });
+    const structuredData = product ? {
+        '@context': 'https://schema.org',
+        '@type': 'Product',
+        name: product.name,
+        description: product.description,
+        image: [product.image, ...product.gallery_images.map((item) => item.image)].filter(Boolean),
+        category: product.category_name,
+        sku: String(product.id),
+        offers: {
+            '@type': 'Offer',
+            priceCurrency: 'GHS',
+            price: product.effective_price || product.price,
+            availability: product.stock_quantity > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+            url: `${window.location.origin}${productPath(product)}`,
+        },
+        ...(product.review_count > 0 ? {
+            aggregateRating: {
+                '@type': 'AggregateRating',
+                ratingValue: product.rating_average,
+                reviewCount: product.review_count,
+            },
+        } : {}),
+    } : undefined;
+    usePageMeta({
+        title: product?.name || 'Product',
+        description: product?.description?.replace(/\s+/g, ' ').slice(0, 160) || 'View product details, availability, and customer reviews at ECCO.',
+        image: product?.image,
+        type: 'product',
+        schema: structuredData,
+    });
     useEffect(() => {
         setLoading(true);
         catalogApi.product(slug)
             .then(async (data) => {
             setProduct(data);
+            rememberProduct(data.slug);
             setSelectedImage(data.image || data.gallery_images[0]?.image || '');
             const result = await catalogApi.products({ category: data.category_name.toLowerCase().replaceAll(' ', '-') });
             setRelated(result.results.filter((item) => item.id !== data.id).slice(0, 4));
@@ -172,6 +207,15 @@ export function ProductDetailPage() {
             setSavingWishlist(false);
         }
     };
+    const handleCompare = () => {
+        try {
+            const added = toggleCompare(product.slug);
+            notify(added ? `${product.name} added to comparison.` : `${product.name} removed from comparison.`, 'success');
+        }
+        catch (reason) {
+            notify(reason.message, 'error');
+        }
+    };
     return (<div className="container page product-detail-page">
       <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to="/">Home</Link><span>/</span><Link to="/products">Products</Link><span>/</span><span>{product.name}</span></nav>
       <article className="product-detail">
@@ -192,6 +236,7 @@ export function ProductDetailPage() {
             {cartItem && <QuantityControl value={cartItem.quantity} max={Math.max(1, product.stock_quantity)} onDecrease={() => void changeQuantity('decrement')} onIncrease={() => void changeQuantity('increment')} disabled={!product.stock_quantity || adding}/>}
             {!cartItem && <Button className="add-to-cart-button" onClick={addToCart} disabled={!product.stock_quantity || adding}>{!adding && <FiShoppingCart aria-hidden="true"/>}{adding ? 'Adding…' : 'Add to cart'}</Button>}
             <Button variant="secondary" className={`wishlist-detail-button${isWishlisted(product.id) ? ' is-saved' : ''}`} onClick={() => void toggleWishlist()} disabled={savingWishlist} aria-pressed={isWishlisted(product.id)}><FiHeart aria-hidden="true"/>{isWishlisted(product.id) ? 'Saved' : 'Save'}</Button>
+            <Button variant="secondary" onClick={handleCompare} aria-pressed={isCompared(product.slug)}><FiColumns aria-hidden="true"/>{isCompared(product.slug) ? 'Compared' : 'Compare'}</Button>
           </div>
           <p className="purchase-note">Inventory and total are validated securely when your order is placed.</p>
         </div>
