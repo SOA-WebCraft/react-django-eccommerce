@@ -1,7 +1,8 @@
 # Ecommerce API
 
-All URLs use JSON and have trailing slashes. Authentication uses Django's
-server-side session. Browsers must include credentials on requests:
+All URLs use JSON and have trailing slashes. The website uses Django's
+server-side session, while native mobile clients use the JWT endpoints under
+`/api/mobile/auth/`. Browsers must include credentials on requests:
 
 ```js
 fetch("/api/cart/", { credentials: "include" })
@@ -19,6 +20,95 @@ authenticated failures return `401`, permission failures return `403`, and missi
 or inaccessible objects return `404`.
 
 ## Users and authentication
+
+### Mobile authentication
+
+Native mobile clients do not use session cookies or CSRF. They store the access
+and refresh tokens in iOS Keychain or Android Keystore and authenticate customer
+API requests with `Authorization: Bearer <access-token>`. Access tokens last 15
+minutes; refresh tokens last 30 days and rotate whenever refreshed. The client
+must replace its saved refresh token after every successful refresh.
+
+JWT-only requests cannot access `/api/staff/*`, and staff accounts cannot obtain
+or use mobile JWTs. Staff access requires the existing authenticated browser
+session, preventing expanded staff behavior on shared endpoints. Invalid or
+expired Bearer tokens return `401 Unauthorized`.
+
+#### POST `/api/mobile/auth/register/`
+
+Creates an active customer account without requiring CSRF. The request and
+validation rules match `/api/users/register/`. This endpoint does not log the
+user in or return tokens. It is limited to five requests per hour per client.
+
+Request:
+
+```json
+{
+  "username": "alice",
+  "email": "alice@example.com",
+  "password": "A-long-safe-password-482!",
+  "confirm_password": "A-long-safe-password-482!"
+}
+```
+
+Success — `201 Created` returns the safe user profile. Passwords and tokens are
+never returned. Validation failures return field-level `400` errors; throttled
+requests return `429`.
+
+#### POST `/api/mobile/auth/token/`
+
+Authenticates with email and password. It is limited to ten attempts per hour
+per client.
+
+```json
+{"email":"alice@example.com","password":"A-long-safe-password-482!"}
+```
+
+Success — `200 OK`:
+
+```json
+{
+  "access": "eyJ...",
+  "refresh": "eyJ...",
+  "access_expires_in": 900,
+  "refresh_expires_in": 2592000,
+  "user": {"id":1,"username":"alice","email":"alice@example.com"}
+}
+```
+
+Invalid, inactive, ambiguous, or unusable-password accounts receive the same
+`401` response: `{"detail":"Invalid email or password."}`. Invalid fields
+return `400`; throttled attempts return `429`.
+
+#### POST `/api/mobile/auth/token/refresh/`
+
+Accepts `{"refresh":"eyJ..."}` and returns a new `access`, rotated `refresh`,
+and both expiry durations with `200 OK`. The submitted refresh token is
+blacklisted and cannot be replayed. Missing input returns `400`; invalid,
+expired, reused, or revoked tokens return `401`. Limited to 60 requests per hour.
+
+#### POST `/api/mobile/auth/logout/`
+
+Accepts `{"refresh":"eyJ..."}`, revokes that refresh token, and returns `204
+No Content`. Repeating logout for the same recognized token is also `204`.
+Malformed, expired, wrong-type, or unrecognized tokens return a field-level
+`400` error. Existing access tokens remain short-lived unless the password is
+changed.
+
+#### POST `/api/mobile/auth/password-reset/`
+
+Accepts `{"email":"alice@example.com"}` without CSRF. It always returns the
+same generic `200` response regardless of account existence and is limited to
+five requests per hour. Eligible users receive a link under
+`MOBILE_APP_BASE_URL/reset-password/{uid}/{token}`.
+
+#### POST `/api/mobile/auth/password-reset/confirm/`
+
+Accepts the same `uid`, `token`, `new_password`, and `confirm_password` body as
+the web confirmation endpoint. Success returns `200`; invalid, expired, reused,
+mismatched, or weak credentials return field-level `400` errors. It is limited
+to ten attempts per hour. A successful password change invalidates previously
+issued mobile JWTs.
 
 ### GET `/api/users/social-providers/`
 
@@ -342,8 +432,8 @@ Errors — `400 Bad Request`:
 Password validation errors are returned under `new_password`. Missing CSRF
 returns `403 Forbidden`; throttled attempts return `429 Too Many Requests`.
 
-The former `/api/token/` and `/api/token/refresh/` JWT endpoints have been
-removed and return `404 Not Found`.
+The former root `/api/token/` and `/api/token/refresh/` routes remain removed.
+Mobile JWT endpoints use the explicit `/api/mobile/auth/` namespace above.
 
 ## Staff customers
 

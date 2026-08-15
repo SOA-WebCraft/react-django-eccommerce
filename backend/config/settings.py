@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -120,6 +121,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'users',
     'catalog',
     'cart',
@@ -360,6 +362,7 @@ DEFAULT_FROM_EMAIL = os.environ.get(
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
+        'users.authentication.MobileJWTAuthentication',
         'users.authentication.SessionAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
@@ -373,5 +376,26 @@ REST_FRAMEWORK = {
         'password_reset_request': '5/hour',
         'password_reset_confirm': '10/hour',
         'email_availability': '60/hour',
+        'mobile_registration': '5/hour',
+        'mobile_login': '10/hour',
+        'mobile_token_refresh': '60/hour',
+        'mobile_password_reset_request': '5/hour',
+        'mobile_password_reset_confirm': '10/hour',
     },
+}
+
+MOBILE_APP_BASE_URL = os.environ.get(
+    'MOBILE_APP_BASE_URL',
+    FRONTEND_BASE_URL,
+).rstrip('/')
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'CHECK_REVOKE_TOKEN': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'SIGNING_KEY': os.environ.get('JWT_SIGNING_KEY', '') or SECRET_KEY,
+    'UPDATE_LAST_LOGIN': False,
 }

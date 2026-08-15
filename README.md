@@ -1,7 +1,8 @@
 # Minimal Ecommerce API
 
-A small REST API built with Django, Django REST Framework, secure server-side
-session authentication, and SQLite for local development.
+A REST API built with Django and Django REST Framework. The React website uses
+secure server-side sessions, native mobile clients use rotating JWTs, and local
+development uses SQLite by default.
 
 ## Local setup
 
@@ -217,12 +218,34 @@ npm run build
 npm run preview
 ```
 
-The storefront formats the currency returned by the checkout API. Authentication
+The storefront formats the currency returned by the checkout API. Website authentication
 is held in Django's server-side session and survives page
 reloads. The browser receives an HttpOnly `sessionid` cookie and a
 JavaScript-readable `csrftoken`; unsafe API requests send the latter in the
 `X-CSRFToken` header. Production settings require HTTPS for both cookies and
 enable HTTPS redirect and HSTS.
+
+### Native mobile authentication
+
+Mobile apps use the `/api/mobile/auth/` registration, token, refresh, logout,
+and password-reset endpoints documented in `backend/api_docs.md`. Send access
+tokens as `Authorization: Bearer <token>`; mobile requests do not use browser
+cookies or CSRF. Access tokens last 15 minutes and refresh tokens last 30 days.
+Refresh tokens rotate, so replace the securely stored token after every refresh.
+
+Store tokens only in iOS Keychain or Android Keystore, never ordinary app
+preferences, logs, source code, or analytics. JWT access supports customer APIs;
+staff accounts cannot obtain or use JWTs, and `/api/staff/*` continues requiring
+the browser session. Set a separate strong
+`JWT_SIGNING_KEY` in production and configure `MOBILE_APP_BASE_URL` to the HTTPS
+universal-link/App-Link origin. Until native association files are configured,
+the existing React reset page acts as the browser fallback.
+
+Remove expired blacklist records periodically:
+
+```powershell
+python backend/manage.py flushexpiredtokens
+```
 
 ## Stripe checkout and private invoices
 
@@ -478,6 +501,8 @@ DJANGO_SECRET_KEY=<secure random value>
 DJANGO_DEBUG=false
 DJANGO_ALLOWED_HOSTS=<service>.koyeb.app
 DJANGO_CSRF_TRUSTED_ORIGINS=https://<project>.vercel.app
+MOBILE_APP_BASE_URL=https://<mobile-universal-link-domain>
+JWT_SIGNING_KEY=<separate-secure-random-value>
 CLOUDINARY_URL=cloudinary://<api-key>:<api-secret>@<cloud-name>
 FRONTEND_BASE_URL=https://<project>.vercel.app
 EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend

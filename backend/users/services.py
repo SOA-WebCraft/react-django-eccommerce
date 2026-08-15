@@ -12,14 +12,15 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
-def send_password_reset_emails(email):
+def send_password_reset_emails(email, base_url=None):
+    base_url = (base_url or settings.FRONTEND_BASE_URL).rstrip('/')
     users = User.objects.filter(email__iexact=email, is_active=True)
     for user in users.iterator():
         if not user.has_usable_password():
             continue
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = default_token_generator.make_token(user)
-        reset_url = f'{settings.FRONTEND_BASE_URL}/reset-password/{uid}/{token}'
+        reset_url = f'{base_url}/reset-password/{uid}/{token}'
         message = (
             f'Hello {user.get_username()},\n\n'
             'Use the link below to reset your ECCO password. This link expires '
