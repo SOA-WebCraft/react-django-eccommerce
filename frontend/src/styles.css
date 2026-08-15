@@ -164,3 +164,56 @@
 .product-price--detail .product-price__original{font-size:1.05rem}
 .product-price--detail .product-price__current{font:700 1.7rem "Manrope"}
 .product-price--detail .product-price__badge{font-size:.75rem}
+
+/* Modern storefront header */
+.announcement{padding:0;background:linear-gradient(90deg,#07142d,#102b68 55%,#173ca8);letter-spacing:0}
+.announcement__content{min-height:34px;display:flex;align-items:center;justify-content:space-between;gap:24px;color:#cbd8f4;font-size:.72rem}
+.announcement__content strong{color:#fff;text-transform:uppercase;letter-spacing:.1em}
+.announcement__support{color:#9fb2d7}
+.site-header{background:rgba(255,255,255,.88);border-color:rgba(203,213,225,.75);box-shadow:0 10px 35px rgba(15,23,42,.06);backdrop-filter:blur(22px) saturate(160%)}
+.header-main{height:82px;grid-template-columns:auto minmax(300px,590px) auto;gap:36px}
+.brand{display:inline-flex;align-items:center;gap:10px;letter-spacing:0}
+.brand__mark{width:38px;height:38px;display:grid;place-items:center;border-radius:12px;background:linear-gradient(145deg,#315ee2,#173ca8);box-shadow:0 9px 22px rgba(36,87,230,.28);color:#fff;font:800 1.15rem "Manrope"}
+.brand__word{color:var(--ink);font:800 1.32rem "Manrope";letter-spacing:-.07em}
+.brand__word strong{color:var(--blue)}
+.header-search{height:48px;padding:0 6px 0 18px;border:1px solid #dbe3ef;border-radius:14px;background:#f5f7fb;box-shadow:inset 0 1px 2px rgba(15,23,42,.03)}
+.header-search:focus-within{border-color:#8eabf5;background:#fff;box-shadow:0 0 0 4px rgba(36,87,230,.1)}
+.header-search input{font-size:.88rem}
+.header-search button{width:38px;height:38px;display:grid;place-items:center;border-radius:10px;background:var(--blue);color:#fff;font-size:1.05rem;transition:background .2s,transform .2s}
+.header-search button:hover{background:var(--blue-dark);transform:translateY(-1px)}
+.header-search--mobile{display:none}
+.header-actions{gap:10px}
+.header-sign-in,.cart-link,.user-menu .account-menu__trigger{min-height:42px;border:1px solid #dbe3ef;border-radius:12px;background:rgba(255,255,255,.82);transition:border-color .2s,background .2s,box-shadow .2s,transform .2s}
+.header-sign-in{display:inline-flex;align-items:center;gap:8px;padding:0 14px}
+.header-sign-in:hover,.cart-link:hover,.user-menu .account-menu__trigger:hover{border-color:#a9bdf2;background:#f7f9ff;box-shadow:0 7px 18px rgba(36,87,230,.1);transform:translateY(-1px)}
+.cart-link{width:42px;height:42px}
+.cart-link__icon{width:20px;height:20px}
+.cart-link .cart-link__count{top:-6px;right:-6px;min-width:20px;height:20px;box-shadow:0 3px 9px rgba(36,87,230,.35)}
+.category-nav{border-top:1px solid rgba(226,232,240,.75)}
+.category-nav .container{height:48px;gap:8px}
+.category-nav a{position:relative;padding:8px 16px;border-radius:9px;color:#536176;font-weight:600;transition:color .2s,background .2s}
+.category-nav a:hover{background:#f2f5fb;color:var(--blue)}
+.category-nav a.active{background:#edf2ff;color:var(--blue)}
+.account-menu{top:calc(100% + 14px);border-radius:16px;box-shadow:0 24px 60px rgba(15,23,42,.2)}
+@media(max-width:900px){
+  .Toastify .app-toast-container{top:174px!important}
+  .announcement__support{display:none}
+  .announcement__content{justify-content:center}
+  .header-main{height:68px;grid-template-columns:42px 1fr auto;gap:12px}
+  .header-main>.brand{justify-self:start}
+  .header-search--desktop{display:none}
+  .header-search--mobile{height:46px;display:flex;margin-bottom:12px}
+  .header-menu-button{width:42px;height:42px;display:grid;place-items:center;border:1px solid #dbe3ef;border-radius:12px;background:#fff;color:var(--ink)}
+  .category-nav--open{top:126px;border-top:1px solid var(--line);box-shadow:0 22px 45px rgba(15,23,42,.16)}
+  .category-nav .container{padding:10px 14px 16px}
+  .category-nav a{padding:12px 14px}
+}
+@media(max-width:600px){
+  .container{width:min(100% - 24px,1180px)}
+  .announcement__content{min-height:30px;font-size:.65rem}
+  .brand{gap:7px}.brand__mark{width:34px;height:34px;border-radius:10px}.brand__word{font-size:1.15rem}
+  .header-actions{gap:7px}.cart-link{width:38px;height:38px;min-height:38px;border-radius:10px}
+  .header-actions>a.header-sign-in{display:inline-flex}
+  .user-menu .account-menu__trigger{min-height:38px;width:38px;padding:0;justify-content:center}
+  .header-search--mobile{margin-bottom:10px}
+}

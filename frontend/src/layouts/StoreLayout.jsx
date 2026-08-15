@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { FiChevronDown, FiGrid, FiHeart, FiLogOut, FiShoppingCart, FiUser } from 'react-icons/fi';
+import {
+    FiChevronDown, FiGrid, FiHeart, FiLogOut, FiMenu, FiSearch,
+    FiShoppingCart, FiUser, FiX,
+} from 'react-icons/fi';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { catalogApi } from '../api/services';
 import { useAuth } from '../hooks/useAuth';
@@ -50,17 +53,25 @@ export function StoreLayout() {
     };
     return (<>
       <a className="skip-link" href="#main-content">Skip to content</a>
-      <div className="announcement">Complimentary delivery on orders over $100</div>
+      <div className="announcement">
+        <div className="container announcement__content">
+          <span><strong>Free delivery</strong> on qualifying orders</span>
+          <span className="announcement__support">Secure checkout · Carefully selected technology</span>
+        </div>
+      </div>
       <header className="site-header">
         <div className="header-main container">
-          <button className="icon-button mobile-only" aria-label="Toggle navigation" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>☰</button>
+          <button className="icon-button mobile-only header-menu-button" aria-label="Toggle navigation" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
+            {menuOpen ? <FiX aria-hidden="true"/> : <FiMenu aria-hidden="true"/>}
+          </button>
           <Link className="brand" to="/" aria-label="ECCO home">
-            EC<span>CO</span>
+            <span className="brand__mark" aria-hidden="true">E</span>
+            <span className="brand__word">EC<strong>CO</strong></span>
           </Link>
-          <form className="header-search" role="search" onSubmit={submitSearch}>
+          <form className="header-search header-search--desktop" role="search" onSubmit={submitSearch}>
             <label className="sr-only" htmlFor="site-search">Search products</label>
             <input id="site-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search phones, laptops, accessories…"/>
-            <button type="submit" aria-label="Search">⌕</button>
+            <button type="submit" aria-label="Search"><FiSearch aria-hidden="true"/></button>
           </form>
           <nav className="header-actions" aria-label="Customer navigation">
             {isAuthenticated ? (<div className="user-menu" ref={accountMenuRef}>
@@ -103,7 +114,7 @@ export function StoreLayout() {
                     <FiLogOut aria-hidden="true" /> Logout
                   </button>
                 </div>}
-              </div>) : (<NavLink to="/login">Sign in</NavLink>)}
+              </div>) : (<NavLink to="/login" className="header-sign-in"><FiUser aria-hidden="true"/><span>Sign in</span></NavLink>)}
             {isAuthenticated && <NavLink to="/wishlist" className="cart-link wishlist-link" aria-label={`Wishlist with ${wishlistCount} products`}>
               <FiHeart className="cart-link__icon" aria-hidden="true"/>
               <span className="cart-link__count" aria-hidden="true">{wishlistCount}</span>
@@ -114,6 +125,11 @@ export function StoreLayout() {
             </NavLink>
           </nav>
         </div>
+        <form className="header-search header-search--mobile container" role="search" onSubmit={submitSearch}>
+          <label className="sr-only" htmlFor="mobile-site-search">Search products</label>
+          <input id="mobile-site-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search the store"/>
+          <button type="submit" aria-label="Search"><FiSearch aria-hidden="true"/></button>
+        </form>
         <nav className={`category-nav ${menuOpen ? 'category-nav--open' : ''}`} aria-label="Product categories">
           <div className="container">
             <NavLink to="/products" onClick={() => setMenuOpen(false)}>Shop all</NavLink>
