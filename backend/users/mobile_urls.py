@@ -5,6 +5,9 @@ from .mobile_views import (
     MobilePasswordResetConfirmView,
     MobilePasswordResetRequestView,
     MobileRegistrationView,
+    MobileSocialExchangeView,
+    MobileSocialGoogleCallbackView,
+    MobileSocialGoogleStartView,
     MobileTokenRefreshView,
     MobileTokenView,
 )
@@ -19,6 +22,21 @@ urlpatterns = [
         name='mobile-token-refresh',
     ),
     path('logout/', MobileLogoutView.as_view(), name='mobile-logout'),
+    path(
+        'social/google/',
+        MobileSocialGoogleStartView.as_view(),
+        name='mobile-social-google',
+    ),
+    path(
+        'social/google/callback/',
+        MobileSocialGoogleCallbackView.as_view(),
+        name='mobile-social-google-callback',
+    ),
+    path(
+        'social/exchange/',
+        MobileSocialExchangeView.as_view(),
+        name='mobile-social-exchange',
+    ),
     path(
         'password-reset/',
         MobilePasswordResetRequestView.as_view(),

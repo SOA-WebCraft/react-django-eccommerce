@@ -110,6 +110,61 @@ mismatched, or weak credentials return field-level `400` errors. It is limited
 to ten attempts per hour. A successful password change invalidates previously
 issued mobile JWTs.
 
+#### GET `/api/mobile/auth/social/google/`
+
+Starts Google sign-in for a native mobile client. Authentication, CSRF, and a
+request body are not required. The required `redirect_uri` query parameter must
+exactly match an entry in `MOBILE_SOCIAL_REDIRECT_URIS`.
+
+```text
+GET /api/mobile/auth/social/google/?redirect_uri=eccostore%3A%2F%2Fauth%2Fsocial
+```
+
+Success redirects to Google. An unapproved redirect returns `400` with
+`{"redirect_uri":["This redirect URI is not allowed."]}`. Unconfigured Google
+returns `503`; throttling after 20 attempts per hour returns `429`.
+
+#### GET `/api/mobile/auth/social/google/callback/`
+
+Google's OAuth callback validates OAuth state and the provider response,
+requires a verified email, and creates or links an active customer account.
+Staff accounts cannot use this flow. On success it redirects to:
+
+```text
+eccostore://auth/social?code=<single-use-code>
+```
+
+Cancellation and safe failures redirect with `error=access_denied`,
+`error=account_unavailable`, or `error=authentication_failed`. JWTs, provider
+tokens, account data, and internal errors are never placed in redirects. A
+missing or expired browser session returns `400`.
+
+#### POST `/api/mobile/auth/social/exchange/`
+
+Exchanges the callback code for customer JWTs without authentication or CSRF.
+Codes expire after two minutes and can be consumed only once.
+
+```json
+{"code":"the-code-returned-to-the-app"}
+```
+
+Success — `200 OK`:
+
+```json
+{
+  "access": "eyJ...",
+  "refresh": "eyJ...",
+  "access_expires_in": 900,
+  "refresh_expires_in": 2592000,
+  "user": {"id":1,"username":"alice","email":"alice@example.com"}
+}
+```
+
+Malformed, invalid, expired, reused, inactive-account, or staff-account codes
+return a field-level `400` error. Throttling after 20 attempts per hour returns
+`429`. Store tokens in Keychain or Keystore and replace the saved refresh token
+after every successful refresh.
+
 ### GET `/api/users/social-providers/`
 
 Returns the supported social sign-in providers and whether each is configured.

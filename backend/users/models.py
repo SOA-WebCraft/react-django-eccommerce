@@ -46,3 +46,26 @@ class SocialIdentity(models.Model):
 
     def __str__(self):
         return f'{self.get_provider_display()} identity for {self.user}'
+
+
+class MobileSocialExchange(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='mobile_social_exchanges',
+    )
+    provider = models.CharField(
+        max_length=20,
+        choices=SocialIdentity.Provider.choices,
+    )
+    code_hash = models.CharField(max_length=64, unique=True)
+    redirect_uri = models.CharField(max_length=500)
+    expires_at = models.DateTimeField(db_index=True)
+    consumed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ('-created_at',)
+
+    def __str__(self):
+        return f'{self.get_provider_display()} mobile exchange for {self.user}'

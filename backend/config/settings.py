@@ -381,6 +381,8 @@ REST_FRAMEWORK = {
         'mobile_token_refresh': '60/hour',
         'mobile_password_reset_request': '5/hour',
         'mobile_password_reset_confirm': '10/hour',
+        'mobile_social_start': '20/hour',
+        'mobile_social_exchange': '20/hour',
     },
 }
 
@@ -388,6 +390,18 @@ MOBILE_APP_BASE_URL = os.environ.get(
     'MOBILE_APP_BASE_URL',
     FRONTEND_BASE_URL,
 ).rstrip('/')
+MOBILE_SOCIAL_CALLBACK_BASE_URL = os.environ.get(
+    'MOBILE_SOCIAL_CALLBACK_BASE_URL',
+    FRONTEND_BASE_URL,
+).rstrip('/')
+MOBILE_SOCIAL_REDIRECT_URIS = tuple(
+    value.strip()
+    for value in os.environ.get(
+        'MOBILE_SOCIAL_REDIRECT_URIS',
+        'eccostore://auth/social',
+    ).split(',')
+    if value.strip()
+)
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),

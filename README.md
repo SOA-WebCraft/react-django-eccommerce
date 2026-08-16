@@ -247,6 +247,37 @@ Remove expired blacklist records periodically:
 python backend/manage.py flushexpiredtokens
 ```
 
+### Google sign-in for the mobile app
+
+The website Google flow continues to create a Django session. Native Expo
+clients use a separate browser exchange so JWTs never appear in callback URLs:
+
+1. Open
+   `/api/mobile/auth/social/google/?redirect_uri=eccostore%3A%2F%2Fauth%2Fsocial`
+   in the system browser.
+2. Handle `eccostore://auth/social?code=...` in the app.
+3. Send the code to `POST /api/mobile/auth/social/exchange/`.
+4. Store the returned access and rotating refresh tokens in iOS Keychain or
+   Android Keystore.
+
+Configure the backend with exact, comma-separated destinations:
+
+```text
+MOBILE_SOCIAL_REDIRECT_URIS=eccostore://auth/social
+MOBILE_SOCIAL_CALLBACK_BASE_URL=https://ecco-storefront.vercel.app
+```
+
+Register this exact authorized redirect URI in Google Auth Platform:
+
+```text
+https://ecco-storefront.vercel.app/api/mobile/auth/social/google/callback/
+```
+
+Register the custom `eccostore` scheme in Expo. If HTTPS universal links or
+Android App Links are added later, configure their platform association files
+and add their exact URLs to `MOBILE_SOCIAL_REDIRECT_URIS`. Exchange codes expire
+after two minutes, work once, and contain no JWT or account information.
+
 ## Stripe checkout and private invoices
 
 Checkout totals and fulfillment are authoritative on Django. The browser requests
